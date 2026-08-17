@@ -1,0 +1,16 @@
+# docker-compose.yml — services locaux pour le developpement.
+# En production, MongoDB est sur Atlas ; ce fichier ne sert qu'aux postes devs.
+version: "3.9"
+
+services:
+  redis:
+    image: redis:7-alpine
+    container_name: stockline-redis
+    restart: unless-stopped
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+
+volumes:
+  redis_data:

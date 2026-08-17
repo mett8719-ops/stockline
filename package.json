@@ -2,15 +2,16 @@
   "name": "stockline-backend",
   "version": "1.0.0",
   "main": "index.js",
-"scripts": {
-  "dev": "nodemon server.js",
-  "start": "node server.js",
-  "seed": "node dry/seed/seed.js",
-  "lint": "eslint .",
-  "test": "jest --runInBand"
-},
-"engines": { "node": ">=20" },
-
+  "scripts": {
+    "dev": "nodemon server.js",
+    "start": "node server.js",
+    "seed": "node dry/seed/seed.js",
+    "lint": "eslint .",
+    "test": "jest --runInBand"
+  },
+  "engines": {
+    "node": ">=20"
+  },
   "keywords": [],
   "author": "",
   "license": "ISC",

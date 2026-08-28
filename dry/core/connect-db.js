@@ -47,3 +47,7 @@ const connectDB = async () => {
 };
 
 module.exports = connectDB;
+module.exports.disconnectDatabase = async () => {
+  await mongoose.connection.close();
+  console.log("MongoDB deconnecte proprement".green);
+};

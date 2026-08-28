@@ -141,22 +141,20 @@ userSchema.index(
  * Parametres : ~64 Mo de memoire, 3 iterations. Suffisamment couteux pour
  * decourager une attaque, assez rapide pour ne pas ralentir la connexion.
  */
-userSchema.pre("save", async function hasherMotDePasse(next) {
-  if (!this.isModified("passwordHash")) return next();
+userSchema.pre("save", async function hasherMotDePasse() {
+  if (!this.isModified("passwordHash")) return;
   this.passwordHash = await hash(this.passwordHash, {
     memoryCost: 65536,
     timeCost: 3,
     parallelism: 4,
   });
-  return next();
 });
 
 /** Applique les permissions par defaut du role si aucune n'est precisee. */
-userSchema.pre("save", function appliquerPermissionsParDefaut(next) {
+userSchema.pre("save", function appliquerPermissionsParDefaut() {
   if (this.isNew && (!this.permissions || this.permissions.length === 0)) {
     this.permissions = DEFAULT_ROLE_PERMISSIONS[this.role] || [];
   }
-  return next();
 });
 
 // ══ METHODES ══════════════════════════════════════════════════════════

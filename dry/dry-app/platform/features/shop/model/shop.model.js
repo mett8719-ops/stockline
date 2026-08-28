@@ -88,15 +88,14 @@ shopSchema.index({ dateProchainRenouvellement: 1, statut: 1 });
 shopSchema.index({ nom: "text", ville: "text" });
 
 /** Genere automatiquement le code lisible T001, T002... a la creation. */
-shopSchema.pre("save", async function attribuerCode(next) {
-  if (this.code) return next();
+shopSchema.pre("save", async function attribuerCode() {
+  if (this.code) return;
   const dernier = await this.constructor
     .findOne({}, { code: 1 })
     .sort({ code: -1 })
     .lean();
   const numero = dernier?.code ? Number(dernier.code.replace("T", "")) + 1 : 1;
   this.code = `T${String(numero).padStart(3, "0")}`;
-  return next();
 });
 
 /** La boutique est-elle operationnelle a l'instant T ? */

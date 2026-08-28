@@ -15,13 +15,13 @@
 require("dotenv").config({ path: "./config.env" });
 require("colors");
 
-const connectDB = require("../../core/connect-db");
-const { PLATFORM_ROLES, PERMISSIONS } = require("../../core/constants");
+const connectDB = require("../core/connect-db");
+const { PLATFORM_ROLES, PERMISSIONS } = require("../core/constants");
 
-const UserModel = require("../../dry-app/boutique/features/auth/model/user.model");
-const PlanModel = require("../../dry-app/platform/features/plan-admin/model/plan.model");
-const FeatureFlagModel = require("../../dry-app/platform/features/feature-flag/model/feature-flag.model");
-const PlatformSettingsModel = require("../../dry-app/platform/features/setting/model/platform-settings.model");
+const UserModel = require("../dry-app/boutique/features/auth/model/user.model");
+const PlanModel = require("../dry-app/platform/features/plan-admin/model/plan.model");
+const FeatureFlagModel = require("../dry-app/platform/features/feature-flag/model/feature-flag.model");
+const PlatformSettingsModel = require("../dry-app/platform/features/setting/model/platform-settings.model");
 
 /** Les trois plans de la page tarifaire. */
 const PLANS = [

@@ -22,7 +22,34 @@ const helmet = require("helmet");
 const cors = require("cors");
 const compression = require("compression");
 const cookieParser = require("cookie-parser");
-const mongoSanitize = require("express-mongo-sanitize");
+/**
+ * Sanitiseur Mongo compatible Express 5.
+ * express-mongo-sanitize v2 essaie d'ecrire req.query, readonly dans Express 5.
+ * On ne sanitisant que req.body et req.params.
+ */
+function mongoSanitizeV5() {
+  const DOLLAR_OR_REGEX = /\$[^\s]|\.$/;
+
+  function nettoyer(objet) {
+    if (objet && typeof objet === "object" && !Array.isArray(objet)) {
+      for (const cle of Object.keys(objet)) {
+        if (DOLLAR_OR_REGEX.test(cle)) {
+          objet[`_${cle.replace(/^\$/, "")}`] = objet[cle];
+          delete objet[cle];
+        } else if (typeof objet[cle] === "object") {
+          nettoyer(objet[cle]);
+        }
+      }
+    }
+    return objet;
+  }
+
+  return (req, _res, next) => {
+    if (req.body) nettoyer(req.body);
+    if (req.params) nettoyer(req.params);
+    next();
+  };
+}
 const swaggerUi = require("swagger-ui-express");
 
 const connectDB = require("./dry/core/connect-db");
@@ -100,7 +127,7 @@ app.use(compression());
  * l'URL. Sans ce middleware, envoyer {"email": {"$ne": null}} au login
  * connecterait le premier utilisateur venu.
  */
-app.use(mongoSanitize({ replaceWith: "_" }));
+app.use(mongoSanitizeV5());
 
 // ══ 4. SONDE DE SANTE ═════════════════════════════════════════════════
 
@@ -187,7 +214,8 @@ const serveur = http.createServer(app);
     // Socket.IO se greffe sur le meme serveur HTTP
     initRealtime(serveur);
 
-    serveur.listen(PORT, () => {
+    const HOST = process.env.HOST || "127.0.0.1";
+    serveur.listen(PORT, HOST, () => {
       console.log("");
       console.log("  ╔═══════════════════════════════════════════════╗".cyan);
       console.log("  ║           STOCKLINE API — DEMARREE            ║".cyan.bold);

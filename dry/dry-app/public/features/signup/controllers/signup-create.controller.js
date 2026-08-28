@@ -11,7 +11,7 @@
  *  - Une seule demande active par adresse email (index partiel unique)
  *  - Le plan choisi doit exister ET etre publie
  */
-const argon2 = require("argon2");
+const { hash: argon2Hash } = require("@node-rs/argon2");
 const asyncHandler = require("../../../../../core/async-handler");
 const AppError = require("../../../../../core/app-error");
 const { success } = require("../../../../../core/response");
@@ -61,8 +61,7 @@ module.exports = asyncHandler(async (req, res) => {
   }
 
   // ── Hachage immediat du mot de passe ────────────────────────────────
-  const passwordHash = await argon2.hash(proprietaire.motDePasse, {
-    type: argon2.argon2id,
+  const passwordHash = await argon2Hash(proprietaire.motDePasse, {
     memoryCost: 65536,
     timeCost: 3,
     parallelism: 4,

@@ -1,0 +1,65 @@
+/**
+ * Styles globaux de l'application.
+ *
+ * La police Inter est chargee depuis Google Fonts : c'est celle utilisee dans
+ * les maquettes Figma.
+ */
+@import url("https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap");
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  html {
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  body {
+    @apply bg-gray-50 text-gray-900 antialiased;
+    font-family: "Inter", system-ui, sans-serif;
+  }
+
+  /**
+   * Retire les fleches des champs numeriques.
+   * En caisse, elles sont inutiles et genent la saisie tactile.
+   */
+  input[type="number"]::-webkit-inner-spin-button,
+  input[type="number"]::-webkit-outer-spin-button {
+    -webkit-appearance: none;
+    margin: 0;
+  }
+  input[type="number"] {
+    -moz-appearance: textfield;
+  }
+
+  /* Barre de defilement discrete */
+  ::-webkit-scrollbar {
+    width: 8px;
+    height: 8px;
+  }
+  ::-webkit-scrollbar-track {
+    @apply bg-transparent;
+  }
+  ::-webkit-scrollbar-thumb {
+    @apply bg-gray-300 rounded-full;
+  }
+  ::-webkit-scrollbar-thumb:hover {
+    @apply bg-gray-400;
+  }
+}
+
+@layer components {
+  /**
+   * Classe utilitaire pour les cartes.
+   * Evite de repeter la meme combinaison sur chaque composant.
+   */
+  .card {
+    @apply bg-white rounded-card border border-gray-200 shadow-card;
+  }
+
+  /* Squelette de chargement */
+  .skeleton {
+    @apply animate-pulse bg-gray-200 rounded;
+  }
+}

@@ -24,6 +24,7 @@ const {
   SHOP_ROLES,
   PERMISSIONS,
   SHOP_STATUS,
+  BILLING_CYCLE,
   DEFAULT_ROLE_PERMISSIONS,
 } = require("../core/constants");
 
@@ -214,7 +215,7 @@ const FLAGS = [
       email: "demo@stockline.cg",
       statut: SHOP_STATUS.ACTIVE,
       planId: plansCrees.Pro?._id || plansCrees.Starter?._id,
-      cycleFacturation: "mensuel",
+      cycleFacturation: BILLING_CYCLE.MONTHLY,
       tauxTva: 0,
       devise: "XAF",
     });

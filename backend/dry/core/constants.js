@@ -87,7 +87,7 @@ const BUSINESS_TYPES = [
   'pharmacie', 'quincaillerie', 'autre',
 ];
 
-const BILLING_CYCLE = { MONTHLY: 'monthly', YEARLY: 'yearly' };
+const BILLING_CYCLE = { MONTHLY: 'monthly', YEARLY: 'yearly', ANNUAL: 'yearly' };
 
 const PAYMENT_METHODS = ['especes', 'mobile_money', 'carte', 'virement', 'credit'];
 

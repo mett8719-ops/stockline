@@ -204,7 +204,7 @@ async function finaliserPaiementAbonnement(invoice, shop, payment) {
       ? new Date(shop.dateProchainRenouvellement)
       : new Date();
 
-  if (shop.cycleFacturation === BILLING_CYCLE.ANNUAL) {
+  if (shop.cycleFacturation === BILLING_CYCLE.YEARLY || shop.cycleFacturation === BILLING_CYCLE.ANNUAL) {
     baseDate.setFullYear(baseDate.getFullYear() + 1);
   } else {
     baseDate.setMonth(baseDate.getMonth() + 1);

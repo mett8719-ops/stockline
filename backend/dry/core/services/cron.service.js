@@ -68,7 +68,7 @@ async function cycleFacturationPlateforme() {
       const plan = shop.planId ? await PlanModel.findById(shop.planId) : null;
       if (!plan) continue;
 
-      const multiplicateur = shop.cycleFacturation === BILLING_CYCLE.ANNUAL ? 12 * 0.85 : 1;
+      const multiplicateur = (shop.cycleFacturation === BILLING_CYCLE.YEARLY || shop.cycleFacturation === BILLING_CYCLE.ANNUAL) ? 12 * 0.85 : 1;
       const montant = Math.round(plan.prix * multiplicateur);
 
       const count = await PlatformInvoiceModel.countDocuments();

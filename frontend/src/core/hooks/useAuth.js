@@ -7,6 +7,7 @@ export function useAuth() {
   const permissions = authStore((state) => state.permissions);
   const isAuthenticated = authStore((state) => state.isAuthenticated);
   const isInitialized = authStore((state) => state.isInitialized);
+  const blockingStatus = authStore((state) => state.blockingStatus);
   const initSession = authStore((state) => state.initSession);
   const logout = authStore((state) => state.logout);
 
@@ -17,6 +18,7 @@ export function useAuth() {
     permissions,
     isAuthenticated,
     isInitialized,
+    blockingStatus,
     initSession,
     logout,
   };

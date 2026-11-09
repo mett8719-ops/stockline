@@ -69,6 +69,18 @@ apiClient.interceptors.response.use(
   async (error) => {
     const originalRequest = error.config;
     const errorCode = error.response?.data?.error?.code;
+    const blockingStatuses = [
+      "SHOP_FROZEN",
+      "SHOP_BANNED",
+      "SHOP_SUSPENDED",
+    ];
+
+    if (blockingStatuses.includes(errorCode)) {
+      authStore.getState().setBlockingStatus({
+        code: errorCode,
+        message: error.response.data.error.message,
+      });
+    }
 
     if (
       error.response?.status !== 401 ||

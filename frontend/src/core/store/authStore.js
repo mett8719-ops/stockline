@@ -9,6 +9,7 @@ const initialSession = {
   shop: null,
   permissions: [],
   isAuthenticated: false,
+  blockingStatus: null,
 };
 
 let initializationPromise = null;
@@ -32,9 +33,12 @@ export const authStore = create((set, get) => ({
       permissions,
       isAuthenticated: true,
       isInitialized: true,
+      blockingStatus: null,
     });
     connectSocket(accessToken);
   },
+
+  setBlockingStatus: (blockingStatus) => set({ blockingStatus }),
 
   setAccessToken: (accessToken) => {
     set({ accessToken });
@@ -46,8 +50,9 @@ export const authStore = create((set, get) => ({
 
   logout: async ({ notifyServer = true } = {}) => {
     const hadSession = Boolean(get().accessToken);
+    const blockingStatus = get().blockingStatus;
 
-    set({ ...initialSession, isInitialized: true });
+    set({ ...initialSession, blockingStatus, isInitialized: true });
     disconnectSocket();
     queryClient.clear();
 

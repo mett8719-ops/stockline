@@ -1,7 +1,7 @@
 # 📋 GUIDE DE MISSION FRONTEND — JHONNY
 
 > **Rôle :** Responsable du Site Public, Inscription (Wizard 4 étapes), Onboarding, Clients, Fournisseurs, Notifications & Messagerie  
-> **Propriétaire de dossier :** `src/apps/public/` *(landing, signup)*, `src/apps/boutique/features/{onboarding, customers, suppliers, suggestions}`, `src/apps/shared/features/{notifications, messaging}`  
+> **Propriétaire de dossier :** `src/apps/public/` *(landing, signup, legal)*, `src/apps/boutique/features/{onboarding, customers, suppliers, suggestions}`, `src/apps/shared/features/{notifications, messaging}`  
 > **Date de début :** Novembre 2026 | **Lead / Revue de PR :** Ethan
 
 ---
@@ -62,9 +62,9 @@ features/<module>/
 
 ## 📅 4. PLANNING DÉTAILLÉ SEMAINE PAR SEMAINE
 
-### ══ SEMAINE 1 : Landing Page Publique Complète ══
-**Objectif :** Réaliser la vitrine publique de Stockline pour convertir les commerçants visiteurs.  
-**Preuve de fin :** En ouvrant `http://localhost:5173/`, je vois le header, la présentation héro, les 6 modules, les tarifs chargés depuis l'API, les avis clients et le footer ; le clic sur "Choisir ce plan" ouvre `/inscription?plan=...`.
+### ══ SEMAINE 1 : Landing Page Publique Complète & Pages Légales ══
+**Objectif :** Réaliser la vitrine publique de Stockline pour convertir les commerçants visiteurs et fournir les pages légales indispensables.  
+**Preuve de fin :** En ouvrant `http://localhost:5173/`, je vois le header, la présentation héro, les 6 modules, les tarifs chargés depuis l'API, les avis clients et le footer ; les liens CGU et Politique de confidentialité ouvrent de vraies pages.
 
 ---
 
@@ -84,7 +84,7 @@ features/<module>/
 
 ---
 
-#### 🔹 TÂCHE JH-02 — Landing : Modules, Tarifs API, Témoignages & Footer
+#### 🔹 TÂCHE JH-02 — Landing : Modules, Tarifs API, Témoignages, Footer & Pages Légales
 - **Branche :** `feature/public-landing-sections` (après JH-01)
 - **Priorité :** Haute | **Échéance :** 06/11/2026 (6h)
 - **Fichiers à créer :**
@@ -92,13 +92,17 @@ features/<module>/
   - `src/apps/public/components/LandingPricing.jsx`
   - `src/apps/public/components/LandingTestimonials.jsx`
   - `src/apps/public/components/LandingFooter.jsx`
+  - `src/apps/public/pages/CguPage.jsx` *(Conditions Générales d'Utilisation)*
+  - `src/apps/public/pages/PrivacyPolicyPage.jsx` *(Politique de confidentialité)*
+  - `src/apps/public/pages/LegalNoticePage.jsx` *(Mentions légales)*
 - **Backend lié :** `GET /api/v1/public/plans` (`backend/dry/dry-app/public/features/plan/controllers/plan-public-list.controller.js`).
 - **Ce que tu dois faire :**
   1. `LandingFeatures` : 6 cartes présentant les atouts clés avec icônes Lucide (Produits & Stock, Vente/POS, Clients & Dettes, Fournisseurs, Trésorerie, Rapports).
   2. `LandingPricing` : Bascule Mensuel / Annuel (-15%). Appeler `GET /api/v1/public/plans`. Afficher les plans dynamiquement (Starter, Pro, Enterprise). Plan populaire mis en avant visuellement. Bouton CTA renvoyant vers `/inscription?plan=<id>&cycle=<mensuel|annuel>`.
   3. Formater les prix avec `formatMoney` de Mechack.
-  4. `LandingFooter` : Liens légaux, contact et copyright.
-- **Preuve / Test :** Les tarifs affichés correspondent exactement aux données renvoyées par l'API backend (15 000, 45 000, 120 000 FCFA).
+  4. `LandingFooter` : Liens légaux (pointant vers `/cgu`, `/confidentialite`, `/mentions-legales`), contact et copyright.
+  5. Intégrer les 3 pages légales simples et propres avec texte standard OHADA/Congo.
+- **Preuve / Test :** Les tarifs affichés correspondent exactement aux données renvoyées par l'API backend ; le clic sur "CGU" dans le footer ou le formulaire d'inscription ouvre bien la page `/cgu`.
 
 ---
 
@@ -111,7 +115,7 @@ features/<module>/
   - Étape 1 : Nom de la boutique, type d'activité (6 choix), ville du Congo (Brazzaville, Pointe-Noire, etc.).
   - Étape 2 : Nom du propriétaire, email, téléphone (+242 06 XXX XX XX), mot de passe sécurisé (8 caractères, min/maj/chiffre/spécial) avec jauge de force.
 - **JH-04 Inscription Wizard : Étape 3 Plan, Étape 4 Confirmation** (`feature/public-signup-steps-3-4` - Échéance 12/11)  
-  *Backend :* `POST /api/v1/public/signup`. Choix du plan, cycle, date de prélèvement. Étape récapitulative modifiable. Case CGU obligatoire. Gestion des erreurs (409 email déjà utilisé : retour auto à l'étape 2). Écran "Demande envoyée !".
+  *Backend :* `POST /api/v1/public/signup`. Choix du plan, cycle, date de prélèvement. Étape récapitulative modifiable. Case CGU obligatoire (avec lien vers `/cgu`). Gestion des erreurs (409 email déjà utilisé : retour auto à l'étape 2). Écran "Demande envoyée !".
 - **JH-05 Première Connexion : Tour Guidé & Checklist** (`feature/boutique-onboarding-tour` - Échéance 13/11)  
   *Dossier :* `src/apps/boutique/features/onboarding`. S'affiche si `!user.aTermineVisiteGuidee`. Tour en modale avec surlignage des menus. `POST /api/v1/auth/complete-tour`. Widget checklist 0/3 sur le tableau de bord.
 

@@ -392,4 +392,8 @@ registerRoute({
   responses: { 200: platformResponse },
 });
 
+// -- BLOCAGE IP DEFINITIF ----------------------------------------------
+router.post('/security/block-ip', superAdminOnly, settings.blockIp);
+router.delete('/security/block-ip/:ip', superAdminOnly, settings.unblockIp);
+
 module.exports = router;

@@ -2,6 +2,7 @@
  * Console Super-Admin — Parametres plateforme et journaux de securite.
  */
 const asyncHandler = require("../../../../../core/async-handler");
+const AppError = require("../../../../../core/app-error");
 const { success, paginationMeta } = require("../../../../../core/response");
 const { recordAudit } = require("../../../../../core/audit");
 const mongoose = require("mongoose");
@@ -12,17 +13,11 @@ const UserModel = require("../../../../boutique/features/auth/model/user.model")
 
 /** GET /platform/settings — Configuration globale. */
 const getSettings = asyncHandler(async (req, res) => {
-  // La methode statique cree le document au premier appel si besoin
   const parametres = await PlatformSettingsModel.get();
   return success(res, parametres);
 });
 
-/**
- * PATCH /platform/settings — Modification.
- *
- * Fusion SUPERFICIELLE par section : envoyer uniquement `emails` ne doit pas
- * effacer la section `general`. Une affectation directe ecraserait tout.
- */
+/** PATCH /platform/settings — Modification. */
 const updateSettings = asyncHandler(async (req, res) => {
   const parametres = await PlatformSettingsModel.get();
 
@@ -44,12 +39,7 @@ const updateSettings = asyncHandler(async (req, res) => {
   return success(res, parametres);
 });
 
-/**
- * GET /platform/logs — Ecran "Journaux & Securite".
- *
- * Renvoie le journal d'audit filtrable, les alertes de securite des dernieres
- * 24 heures, et l'etat de sante de l'infrastructure.
- */
+/** GET /platform/logs — Ecran "Journaux & Securite". */
 const listAuditLogs = asyncHandler(async (req, res) => {
   const { page, limit, severite, action, shopId, from, to } = req.validated.query;
 
@@ -60,11 +50,11 @@ const listAuditLogs = asyncHandler(async (req, res) => {
 
   if (from || to) {
     filtre.createdAt = {};
-    if (from) filtre.createdAt.$gte = from;
-    if (to) filtre.createdAt.$lte = to;
+    if (from) filtre.createdAt.$gte = new Date(from);
+    if (to) filtre.createdAt.$lte = new Date(to);
   }
 
-  const [journaux, total, alertesSecurite, comptesBloques] = await Promise.all([
+  const [logs, total, alertes24h, comptesBloques, parametres] = await Promise.all([
     AuditLogModel.find(filtre)
       .sort({ createdAt: -1 })
       .skip((page - 1) * limit)
@@ -73,40 +63,34 @@ const listAuditLogs = asyncHandler(async (req, res) => {
 
     AuditLogModel.countDocuments(filtre),
 
-    // Alertes de securite des dernieres 24 heures
     AuditLogModel.find({
       severite: "haute",
-      action: {
-        $in: [
-          "auth.login.failed",
-          "auth.account.locked",
-          "auth.refresh.reuse_detected",
-        ],
-      },
-      createdAt: { $gte: new Date(Date.now() - 24 * 60 * 60 * 1000) },
+      createdAt: { $gte: new Date(Date.now() - 24 * 3600 * 1000) },
     })
       .sort({ createdAt: -1 })
-      .limit(10)
+      .limit(5)
       .lean(),
 
-    UserModel.countDocuments({ bloqueJusquA: { $gt: new Date() } }),
+    UserModel.countDocuments({
+      verrouilleJusquA: { $gt: new Date() },
+    }),
+
+    PlatformSettingsModel.get(),
   ]);
 
   return success(
     res,
     {
-      journaux,
-      alertesSecurite,
-      // Encadre "Sante de l'infrastructure"
+      logs,
+      alertesSecurite24h: alertes24h,
+      ipsBloquees: parametres.ipsBloquees || [],
       santeInfrastructure: {
         api: {
           statut: "operationnel",
           memoireMo: Math.round(process.memoryUsage().rss / 1048576),
         },
         baseDeDonnees: {
-          // readyState 1 = connecte
-          statut:
-            mongoose.connection.readyState === 1 ? "operationnel" : "degrade",
+          statut: mongoose.connection.readyState === 1 ? "operationnel" : "degrade",
         },
         comptesTemporairementBloques: comptesBloques,
         demarreDepuis: `${Math.floor(process.uptime() / 3600)}h`,
@@ -117,4 +101,51 @@ const listAuditLogs = asyncHandler(async (req, res) => {
   );
 });
 
-module.exports = { getSettings, updateSettings, listAuditLogs };
+/**
+ * POST /platform/security/block-ip — Bloquer definitivement une adresse IP.
+ */
+const blockIp = asyncHandler(async (req, res) => {
+  const { ip, motif } = req.body;
+  if (!ip) throw AppError.badRequest("L'adresse IP est obligatoire");
+
+  const parametres = await PlatformSettingsModel.get();
+  if (!parametres.ipsBloquees.includes(ip)) {
+    parametres.ipsBloquees.push(ip);
+    await parametres.save();
+
+    await recordAudit(req, "ip.blocked", {
+      severite: "haute",
+      cible: "Security",
+      details: { ip, motif: motif || "Blocage definitif manuel par Super-Admin" },
+    });
+  }
+
+  return success(res, { message: `L'adresse IP ${ip} a ete bloquee definitivement.`, ipsBloquees: parametres.ipsBloquees });
+});
+
+/**
+ * DELETE /platform/security/block-ip/:ip — Debloquer une adresse IP.
+ */
+const unblockIp = asyncHandler(async (req, res) => {
+  const { ip } = req.params;
+  const parametres = await PlatformSettingsModel.get();
+
+  parametres.ipsBloquees = parametres.ipsBloquees.filter((blocked) => blocked !== ip);
+  await parametres.save();
+
+  await recordAudit(req, "ip.unblocked", {
+    severite: "moyenne",
+    cible: "Security",
+    details: { ip },
+  });
+
+  return success(res, { message: `L'adresse IP ${ip} a ete debloquee.`, ipsBloquees: parametres.ipsBloquees });
+});
+
+module.exports = {
+  getSettings,
+  updateSettings,
+  listAuditLogs,
+  blockIp,
+  unblockIp,
+};

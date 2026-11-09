@@ -56,6 +56,7 @@ const connectDB = require("./dry/core/connect-db");
 const { errorHandler, notFoundHandler } = require("./dry/core/error-handler");
 const { buildOpenApiDocument } = require("./dry/core/openapi");
 const { initRealtime } = require("./dry/core/services/realtime.service");
+const { initCronJobs } = require("./dry/core/services/cron.service");
 
 // ── Routeurs des 4 espaces ────────────────────────────────────────────
 const authRoute = require("./dry/dry-app/boutique/features/auth/routes/auth.route");
@@ -171,7 +172,7 @@ app.use(API_PREFIX, sharedRoute);
 // Feature flags actifs pour la boutique de l'appelant
 app.get(`${API_PREFIX}/features`, authenticate, myFeatures);
 
-// Espace boutique : les 13 modules metier
+// Espace boutique : les 13 modules metier + abonnement
 app.use(API_PREFIX, boutiqueRoute);
 
 // ══ 6. DOCUMENTATION OPENAPI ══════════════════════════════════════════
@@ -214,6 +215,9 @@ const serveur = http.createServer(app);
     // Socket.IO se greffe sur le meme serveur HTTP
     initRealtime(serveur);
 
+    // Initialisation des taches planifiees (facturation automatique, devis, analytique)
+    initCronJobs();
+
     const HOST = process.env.HOST || "127.0.0.1";
     serveur.listen(PORT, HOST, () => {
       console.log("");
@@ -244,7 +248,6 @@ const arretPropre = async (signal) => {
   console.log(`\n${signal} recu — arret en cours...`.yellow);
 
   serveur.close(async () => {
-    const { disconnectDatabase } = require("./dry/core/connect-db");
     try {
       await require("mongoose").connection.close();
       console.log("Arret propre termine".green);

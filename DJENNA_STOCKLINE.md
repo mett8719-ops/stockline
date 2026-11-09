@@ -189,7 +189,7 @@ features/<module>/
 ### ══ SEMAINE 4 : Clôture Inventaire, Employés & Paramètres ══
 - **DJ-12 Clôture d'inventaire** (`feature/boutique-inventory-close` - Échéance 23/11) : `POST /inventories/:id/close` avec confirmation et rapport d'ajustements.
 - **DJ-13 Gestion des employés** (`feature/boutique-users-list` - Échéance 25/11) : `GET /users`, invitation `POST /users` affichant le mot de passe temporaire unique, gel et rôles.
-- **DJ-14 Rôles sur mesure & Paramètres boutique** (`feature/boutique-settings-roles` - Échéance 27/11) : `GET /roles`, configuration de la grille des 14 permissions.
+- **DJ-14 Rôles sur mesure & Paramètres boutique** (`feature/boutique-settings-roles` - Échéance 27/11) : `GET /roles`, configuration de la grille des 14 permissions. �cran Profil utilisateur (/profile) avec informations personnelles et formulaire de changement volontaire du mot de passe (POST /api/v1/auth/change-password).
 
 ---
 

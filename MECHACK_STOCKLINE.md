@@ -69,7 +69,7 @@ features/<module>/
 
 ---
 
-#### 🔹 TÂCHE ME-01 — Utilitaires transverses & Hooks de base
+#### 🔹 TÂCHE ME-01 — Utilitaires transverses & Hooks de base (incluant Dark Mode)
 - **Branche :** `feature/core-utils`
 - **Priorité :** Haute | **Échéance :** 03/11/2026 (4h)
 - **Fichiers à créer :**
@@ -80,12 +80,14 @@ features/<module>/
   - `src/core/hooks/useDebounce.js`
   - `src/core/hooks/useDisclosure.js`
   - `src/core/hooks/usePagination.js`
+  - `src/core/hooks/useTheme.js` *(Mode sombre : toggle 'dark' sur documentElement, persistance en localStorage)*
 - **Ce que tu dois faire :**
   1. `cn.js` : combinaison de `clsx` et `tailwind-merge` pour concaténer les classes sans conflits.
   2. `formatMoney.js` : prend un nombre, formate avec un espace comme séparateur de milliers, zéro décimale par défaut, suffixé de `" FCFA"`.
   3. `formatDate.js` : dayjs configuré avec la locale `'fr'`. Fournir `formatDate(d)`, `formatDateTime(d)` et `formatRelative(d)` ("il y a 10 min").
   4. `labels.js` : dictionnaires de traduction des statuts serveur vers le français (statuts de vente, de document, de ticket...).
   5. `useDebounce(value, 300)` : hook essentiel pour retarder la recherche serveur de 300ms.
+  6. `useTheme()` : fournit `{ theme, toggleTheme }`, applique la classe `dark` pour que le bouton soleil/lune de la TopBar fonctionne réellement.
 - **Preuve / Test :** Écris des tests unitaires ou des exemples d'usage en commentaire.
 
 ---

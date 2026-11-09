@@ -1,5 +1,5 @@
 /**
- * Routeur de l'espace BOUTIQUE — agrege les 13 modules metier.
+ * Routeur de l'espace BOUTIQUE — agrege les 13 modules metier + abonnement.
  *
  * ══ ORDRE DES MIDDLEWARES : VOLONTAIRE ET IMPORTANT ══
  *   1. authenticate                   → verifie le jeton, charge l'utilisateur
@@ -30,6 +30,7 @@ const { router: userRoute, roleRouter } =
   require("../features/user/routes/user-shop.route");
 const reportRoute = require("../features/report/routes/report.route");
 const suggestionRoute = require("../features/suggestion/routes/suggestion.route");
+const subscriptionRoute = require("../features/subscription/routes/subscription.route");
 
 const router = express.Router();
 
@@ -52,9 +53,10 @@ router.use("/documents", documentRoute);
 router.use("/treasury", treasuryRoute);
 router.use("/reports", reportRoute);
 
-// ── Administration de la boutique ─────────────────────────────────────
+// ── Administration et abonnement de la boutique ───────────────────────
 router.use("/users", userRoute);
 router.use("/roles", roleRouter);
 router.use("/suggestions", suggestionRoute);
+router.use("/subscription", subscriptionRoute);
 
 module.exports = router;

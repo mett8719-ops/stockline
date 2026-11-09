@@ -2,7 +2,7 @@
  * PARAMETRES GLOBAUX DE LA PLATEFORME — document UNIQUE (singleton).
  *
  * Correspond a l'ecran "Parametres plateforme" et ses trois onglets :
- * General · Emails & Notifications · Limites & Quotas.
+ * General · Emails & Notifications · Limites & Quotas + Securite.
  *
  * Le champ `cle: "global"` avec index unique garantit qu'il ne peut exister
  * qu'un seul document de configuration.
@@ -44,16 +44,19 @@ const platformSettingsSchema = new mongoose.Schema(
       suspensionAutomatique: { type: Boolean, default: true },
     },
 
+    // ── Securite : IPs bloquees definitivement ───────────────────────────
+    ipsBloquees: { type: [String], default: [] },
+
     modifiePar: { type: mongoose.Schema.Types.ObjectId, ref: "boutique-user" },
   },
   { timestamps: true }
 );
 
 /**
- * Recupere le document unique, ou le cree au premier appel avec les valeurs
- * par defaut. Evite d'avoir a l'initialiser manuellement.
+ * Recupere la configuration globale, ou la cree avec les valeurs par defaut si
+ * c'est le tout premier demarrage de l'application.
  */
-platformSettingsSchema.statics.get = async function get() {
+platformSettingsSchema.statics.get = async function () {
   let doc = await this.findOne({ cle: "global" });
   if (!doc) doc = await this.create({ cle: "global" });
   return doc;

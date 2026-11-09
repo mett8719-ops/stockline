@@ -77,10 +77,16 @@ const authenticate = asyncHandler(async (req, _res, next) => {
     }
 
     if (shop.statut === SHOP_STATUS.SUSPENDED) {
-      throw new AppError(
-        "Abonnement suspendu pour non-paiement. Regularisez votre situation pour retrouver l'acces.",
-        403, "SHOP_SUSPENDED"
-      );
+      // EXCEPTION INDISPENSABLE : Une boutique suspendue DOIT pouvoir consulter son abonnement et payer pour se reactiver
+      const urlDemandee = (req.originalUrl || req.url || "").toLowerCase();
+      const estRouteAbonnement = urlDemandee.includes("/subscription");
+
+      if (!estRouteAbonnement) {
+        throw new AppError(
+          "Abonnement suspendu pour non-paiement. Regularisez votre situation pour retrouver l'acces.",
+          403, "SHOP_SUSPENDED"
+        );
+      }
     }
 
     if (shop.statut === SHOP_STATUS.PENDING) {

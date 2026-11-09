@@ -1,7 +1,7 @@
 # 📋 GUIDE DE MISSION & LEADERSHIP — ETHAN
 
 > **Rôle :** Lead Tech & Développeur Fullstack (Console Super-Admin, PWA Offline, Recette & Déploiement)  
-> **Propriétaire de dossier :** `src/apps/platform/features/{signups, shops, billing, plans, overview, analytics}`, `src/core/offline/`, `backend/` *(évolutions)*  
+> **Propriétaire de dossier :** `src/apps/platform/features/{signups, shops, billing, plans, overview, analytics}`, `src/core/offline/`, `src/apps/boutique/features/subscription/`, `backend/` *(évolutions)*  
 > **Date de début :** Novembre 2026
 
 ---
@@ -27,9 +27,13 @@
 
 ---
 
-### ══ SEMAINE 3 : Facturation Abonnements & Plans ══
+### ══ SEMAINE 3 : Facturation Abonnements, Plans & Paiement Boutique Autonome ══
 - **ET-04 Console : Facturation & Encaissement Mobile Money** (`feature/platform-billing` - Échéance 18/11) :
   - KPI MRR/ARR, `POST /platform/billing/charge` avec polling toutes les 5s sur le statut de validation du téléphone.
+- **ET-04b Boutique : Écran "Mon Abonnement & Paiement"** (`feature/boutique-subscription` - Échéance 19/11) :
+  - Écran `/subscription` accessible par le gérant (même si sa boutique est suspendue pour non-paiement).
+  - Consomme `GET /api/v1/subscription` (détails du plan, date de renouvellement, facture impayée).
+  - Bouton "Régulariser par Mobile Money" appelant `POST /api/v1/subscription/pay` avec suivi en direct (`GET /api/v1/subscription/payment-status/:id`). Dès validation, la boutique est réactivée en temps réel.
 - **ET-05 Console : Gestion des Plans Tarifaires** (`feature/platform-plans` - Échéance 20/11) :
   - Création/modification des plans, quotas et grille des 14 fonctionnalités.
 
@@ -37,7 +41,7 @@
 
 ### ══ SEMAINE 4 : Analytique d'Usage & Vue d'Ensemble ══
 - **ET-06 Console : Vue d'ensemble & Analytique anonymisée** (`feature/platform-overview-analytics` - Échéance 25/11) :
-  - `GET /platform/overview`, `GET /platform/analytics?jours=30` (graphiques Recharts, croissance tenants, bandeau d'anonymisation).
+  - `GET /platform/overview`, `GET /platform/analytics?jours=30` (graphiques Recharts, croissance tenants, bandeau d'anonymisation alimenté par la tâche cron `flushUsageToDatabase`).
 
 ---
 

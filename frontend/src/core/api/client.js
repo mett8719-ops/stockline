@@ -38,7 +38,7 @@ async function refreshAccessToken() {
           throw new Error("La réponse de rafraîchissement ne contient pas de jeton.");
         }
 
-        authStore.setState({ accessToken });
+        authStore.getState().setAccessToken(accessToken);
         logoutStarted = false;
         return accessToken;
       })
@@ -50,14 +50,17 @@ async function refreshAccessToken() {
   return refreshPromise;
 }
 
-function logoutAndRedirect() {
+async function logoutAndRedirect() {
   if (logoutStarted) return;
 
   logoutStarted = true;
-  authStore.getState().logout();
 
-  if (window.location.pathname !== "/login") {
-    window.location.assign("/login");
+  try {
+    await authStore.getState().logout();
+  } finally {
+    if (window.location.pathname !== "/login") {
+      window.location.assign("/login");
+    }
   }
 }
 
@@ -66,11 +69,24 @@ apiClient.interceptors.response.use(
   async (error) => {
     const originalRequest = error.config;
     const errorCode = error.response?.data?.error?.code;
+    const blockingStatuses = [
+      "SHOP_FROZEN",
+      "SHOP_BANNED",
+      "SHOP_SUSPENDED",
+    ];
+
+    if (blockingStatuses.includes(errorCode)) {
+      authStore.getState().setBlockingStatus({
+        code: errorCode,
+        message: error.response.data.error.message,
+      });
+    }
 
     if (
       error.response?.status !== 401 ||
       errorCode !== "TOKEN_EXPIRED" ||
       !originalRequest ||
+      originalRequest.skipAuthRefresh ||
       originalRequest._retry
     ) {
       return Promise.reject(error);
@@ -83,7 +99,7 @@ apiClient.interceptors.response.use(
       originalRequest.headers.Authorization = `Bearer ${accessToken}`;
       return apiClient(originalRequest);
     } catch (refreshError) {
-      logoutAndRedirect();
+      await logoutAndRedirect();
       return Promise.reject(refreshError);
     }
   },

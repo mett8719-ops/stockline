@@ -1,4 +1,6 @@
 import { createBrowserRouter } from "react-router-dom";
+import BoutiqueLayout from "@/apps/boutique/layout/BoutiqueLayout.jsx";
+import PlatformLayout from "@/apps/platform/layout/PlatformLayout.jsx";
 import ComingSoon from "@/components/feedback/ComingSoon.jsx";
 import PermissionRoute from "@/components/layout/PermissionRoute.jsx";
 import PlatformRoute from "@/components/layout/PlatformRoute.jsx";
@@ -42,8 +44,10 @@ function createRoute(route) {
   }
 
   if (route.platform) {
+    element = <PlatformLayout>{element}</PlatformLayout>;
     element = <PlatformRoute>{element}</PlatformRoute>;
   } else if (route.public !== true) {
+    element = <BoutiqueLayout>{element}</BoutiqueLayout>;
     element = <ProtectedRoute>{element}</ProtectedRoute>;
   }
 

@@ -30,3 +30,13 @@ export async function deactivateProduct(productId) {
   const { data } = await apiClient.delete(`/products/${productId}`);
   return data.data;
 }
+
+export async function createProduct(product) {
+  const { data } = await apiClient.post("/products", product);
+  return data.data;
+}
+
+export async function updateProduct({ productId, product }) {
+  const { data } = await apiClient.patch(`/products/${productId}`, product);
+  return data.data;
+}

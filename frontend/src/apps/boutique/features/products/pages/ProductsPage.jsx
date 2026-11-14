@@ -2,12 +2,15 @@ import { useEffect, useState } from "react";
 import {
   ChevronLeft,
   ChevronRight,
+  Pencil,
   Package,
+  Plus,
   Search,
   SlidersHorizontal,
   Trash2,
 } from "lucide-react";
 import { parseApiError } from "@/core/api/errors.js";
+import ProductFormModal from "../components/ProductFormModal.jsx";
 import {
   useDeactivateProduct,
   useProductCategories,
@@ -74,6 +77,8 @@ export default function ProductsPage() {
   const [statutStock, setStatutStock] = useState("");
   const [page, setPage] = useState(1);
   const [feedback, setFeedback] = useState(null);
+  const [isProductFormOpen, setIsProductFormOpen] = useState(false);
+  const [editingProduct, setEditingProduct] = useState(null);
   const categoriesQuery = useProductCategories();
   const productsQuery = useProducts({
     page,
@@ -142,6 +147,17 @@ export default function ProductsPage() {
               : "Consultez et gérez les produits de votre boutique."}
           </p>
         </div>
+        <button
+          className="inline-flex h-10 items-center justify-center gap-2 rounded-lg bg-brand-600 px-4 text-sm font-semibold text-white transition hover:bg-brand-700 focus:outline-none focus:ring-2 focus:ring-brand-300"
+          onClick={() => {
+            setEditingProduct(null);
+            setIsProductFormOpen(true);
+          }}
+          type="button"
+        >
+          <Plus aria-hidden="true" className="h-4 w-4" />
+          Ajouter un produit
+        </button>
       </header>
 
       <div className="card flex flex-col gap-3 p-4 sm:flex-row sm:items-center">
@@ -325,16 +341,30 @@ export default function ProductsPage() {
                             <StockStatus status={product.statutStock} />
                           </td>
                           <td className="px-4 py-4 text-right">
-                            <button
-                              aria-label={`Désactiver ${product.nom}`}
-                              className="rounded-md p-2 text-slate-400 transition hover:bg-red-50 hover:text-red-600 focus:outline-none focus:ring-2 focus:ring-red-200 disabled:cursor-not-allowed disabled:opacity-50"
-                              disabled={deactivateMutation.isPending}
-                              onClick={() => handleDeactivate(product)}
-                              title="Désactiver le produit"
-                              type="button"
-                            >
-                              <Trash2 aria-hidden="true" className="h-4 w-4" />
-                            </button>
+                            <div className="flex justify-end gap-1">
+                              <button
+                                aria-label={`Modifier ${product.nom}`}
+                                className="rounded-md p-2 text-slate-400 transition hover:bg-blue-50 hover:text-brand-600 focus:outline-none focus:ring-2 focus:ring-brand-200"
+                                onClick={() => {
+                                  setEditingProduct(product);
+                                  setIsProductFormOpen(true);
+                                }}
+                                title="Modifier le produit"
+                                type="button"
+                              >
+                                <Pencil aria-hidden="true" className="h-4 w-4" />
+                              </button>
+                              <button
+                                aria-label={`Désactiver ${product.nom}`}
+                                className="rounded-md p-2 text-slate-400 transition hover:bg-red-50 hover:text-red-600 focus:outline-none focus:ring-2 focus:ring-red-200 disabled:cursor-not-allowed disabled:opacity-50"
+                                disabled={deactivateMutation.isPending}
+                                onClick={() => handleDeactivate(product)}
+                                title="Désactiver le produit"
+                                type="button"
+                              >
+                                <Trash2 aria-hidden="true" className="h-4 w-4" />
+                              </button>
+                            </div>
                           </td>
                         </tr>
                       );
@@ -394,6 +424,20 @@ export default function ProductsPage() {
           </>
         )}
       </div>
+
+      {isProductFormOpen && (
+        <ProductFormModal
+          onClose={() => {
+            setIsProductFormOpen(false);
+            setEditingProduct(null);
+          }}
+          onSaved={(message) => {
+            setFeedback({ type: "success", message });
+            setPage(1);
+          }}
+          product={editingProduct}
+        />
+      )}
     </section>
   );
 }

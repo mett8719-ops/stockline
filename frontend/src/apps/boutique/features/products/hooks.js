@@ -1,8 +1,10 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
+  createProduct,
   deactivateProduct,
   fetchCategories,
   fetchProducts,
+  updateProduct,
 } from "./api.js";
 
 const productKeys = {
@@ -31,6 +33,23 @@ export function useDeactivateProduct() {
 
   return useMutation({
     mutationFn: deactivateProduct,
+    onSuccess: async () => {
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: productKeys.all }),
+        queryClient.invalidateQueries({ queryKey: productKeys.categories }),
+      ]);
+    },
+  });
+}
+
+export function useSaveProduct() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: ({ productId, product }) =>
+      productId
+        ? updateProduct({ productId, product })
+        : createProduct(product),
     onSuccess: async () => {
       await Promise.all([
         queryClient.invalidateQueries({ queryKey: productKeys.all }),

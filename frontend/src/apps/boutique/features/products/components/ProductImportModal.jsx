@@ -241,10 +241,9 @@ export default function ProductImportModal({ onClose, onImported }) {
       onClick={(event) => {
         if (event.target === dialogRef.current && !isBusy) onClose();
       }}
-      onClose={onClose}
       onCancel={(event) => {
-        if (isBusy) event.preventDefault();
-        else onClose();
+        event.preventDefault();
+        if (!isBusy) onClose();
       }}
       ref={dialogRef}
     >

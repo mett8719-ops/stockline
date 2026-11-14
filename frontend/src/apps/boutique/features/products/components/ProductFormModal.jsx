@@ -135,10 +135,9 @@ export default function ProductFormModal({
       onClick={(event) => {
         if (event.target === dialogRef.current && !saveProduct.isPending) onClose();
       }}
-      onClose={onClose}
       onCancel={(event) => {
-        if (saveProduct.isPending) event.preventDefault();
-        else onClose();
+        event.preventDefault();
+        if (!saveProduct.isPending) onClose();
       }}
       ref={dialogRef}
     >

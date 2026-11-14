@@ -110,10 +110,9 @@ export default function StockMovementModal({ onClose, onSaved }) {
       onClick={(event) => {
         if (event.target === dialogRef.current && !createMovement.isPending) onClose();
       }}
-      onClose={onClose}
       onCancel={(event) => {
-        if (createMovement.isPending) event.preventDefault();
-        else onClose();
+        event.preventDefault();
+        if (!createMovement.isPending) onClose();
       }}
       ref={dialogRef}
     >

@@ -4,6 +4,7 @@ import {
   deactivateProduct,
   fetchCategories,
   fetchProducts,
+  importProducts,
   updateProduct,
 } from "./api.js";
 
@@ -50,6 +51,20 @@ export function useSaveProduct() {
       productId
         ? updateProduct({ productId, product })
         : createProduct(product),
+    onSuccess: async () => {
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: productKeys.all }),
+        queryClient.invalidateQueries({ queryKey: productKeys.categories }),
+      ]);
+    },
+  });
+}
+
+export function useImportProducts() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: importProducts,
     onSuccess: async () => {
       await Promise.all([
         queryClient.invalidateQueries({ queryKey: productKeys.all }),

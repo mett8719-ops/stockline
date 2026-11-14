@@ -2,6 +2,8 @@ import { useEffect, useState } from "react";
 import {
   ChevronLeft,
   ChevronRight,
+  Download,
+  FileUp,
   Pencil,
   Package,
   Plus,
@@ -11,6 +13,9 @@ import {
 } from "lucide-react";
 import { parseApiError } from "@/core/api/errors.js";
 import ProductFormModal from "../components/ProductFormModal.jsx";
+import ProductImportModal from "../components/ProductImportModal.jsx";
+import { fetchProductsForExport } from "../api.js";
+import { downloadProductsCsv, serializeProductsCsv } from "../csv.js";
 import {
   useDeactivateProduct,
   useProductCategories,
@@ -78,6 +83,8 @@ export default function ProductsPage() {
   const [page, setPage] = useState(1);
   const [feedback, setFeedback] = useState(null);
   const [isProductFormOpen, setIsProductFormOpen] = useState(false);
+  const [isImportModalOpen, setIsImportModalOpen] = useState(false);
+  const [isExporting, setIsExporting] = useState(false);
   const [editingProduct, setEditingProduct] = useState(null);
   const categoriesQuery = useProductCategories();
   const productsQuery = useProducts({
@@ -111,6 +118,27 @@ export default function ProductsPage() {
   function updateStockStatus(value) {
     setStatutStock(value);
     setPage(1);
+  }
+
+  async function handleExport() {
+    setFeedback(null);
+    setIsExporting(true);
+
+    try {
+      const allProducts = await fetchProductsForExport();
+      downloadProductsCsv(serializeProductsCsv(allProducts));
+      setFeedback({
+        type: "success",
+        message: `${allProducts.length} produit${allProducts.length === 1 ? "" : "s"} exporté${allProducts.length === 1 ? "" : "s"} au format CSV.`,
+      });
+    } catch (error) {
+      setFeedback({
+        type: "error",
+        message: `Échec de l’export : ${parseApiError(error).message}`,
+      });
+    } finally {
+      setIsExporting(false);
+    }
   }
 
   function handleDeactivate(product) {
@@ -147,17 +175,36 @@ export default function ProductsPage() {
               : "Consultez et gérez les produits de votre boutique."}
           </p>
         </div>
-        <button
-          className="inline-flex h-10 items-center justify-center gap-2 rounded-lg bg-brand-600 px-4 text-sm font-semibold text-white transition hover:bg-brand-700 focus:outline-none focus:ring-2 focus:ring-brand-300"
-          onClick={() => {
-            setEditingProduct(null);
-            setIsProductFormOpen(true);
-          }}
-          type="button"
-        >
-          <Plus aria-hidden="true" className="h-4 w-4" />
-          Ajouter un produit
-        </button>
+        <div className="flex flex-wrap gap-2">
+          <button
+            className="inline-flex h-10 items-center justify-center gap-2 rounded-lg border border-slate-200 bg-white px-3 text-sm font-medium text-slate-700 transition hover:bg-slate-50 focus:outline-none focus:ring-2 focus:ring-brand-200 disabled:cursor-not-allowed disabled:opacity-60"
+            disabled={isExporting}
+            onClick={handleExport}
+            type="button"
+          >
+            <Download aria-hidden="true" className="h-4 w-4" />
+            {isExporting ? "Export…" : "Exporter CSV"}
+          </button>
+          <button
+            className="inline-flex h-10 items-center justify-center gap-2 rounded-lg border border-slate-200 bg-white px-3 text-sm font-medium text-slate-700 transition hover:bg-slate-50 focus:outline-none focus:ring-2 focus:ring-brand-200"
+            onClick={() => setIsImportModalOpen(true)}
+            type="button"
+          >
+            <FileUp aria-hidden="true" className="h-4 w-4" />
+            Importer CSV
+          </button>
+          <button
+            className="inline-flex h-10 items-center justify-center gap-2 rounded-lg bg-brand-600 px-4 text-sm font-semibold text-white transition hover:bg-brand-700 focus:outline-none focus:ring-2 focus:ring-brand-300"
+            onClick={() => {
+              setEditingProduct(null);
+              setIsProductFormOpen(true);
+            }}
+            type="button"
+          >
+            <Plus aria-hidden="true" className="h-4 w-4" />
+            Ajouter un produit
+          </button>
+        </div>
       </header>
 
       <div className="card flex flex-col gap-3 p-4 sm:flex-row sm:items-center">
@@ -436,6 +483,18 @@ export default function ProductsPage() {
             setPage(1);
           }}
           product={editingProduct}
+        />
+      )}
+      {isImportModalOpen && (
+        <ProductImportModal
+          onClose={() => setIsImportModalOpen(false)}
+          onImported={() => {
+            setPage(1);
+            setFeedback({
+              type: "success",
+              message: "Import traité. Consultez le rapport pour le détail des lignes.",
+            });
+          }}
         />
       )}
     </section>

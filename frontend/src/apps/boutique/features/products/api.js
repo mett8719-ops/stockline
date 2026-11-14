@@ -40,3 +40,13 @@ export async function updateProduct({ productId, product }) {
   const { data } = await apiClient.patch(`/products/${productId}`, product);
   return data.data;
 }
+
+export async function fetchProductsForExport() {
+  const { data } = await apiClient.get("/products/export");
+  return data.data;
+}
+
+export async function importProducts(products) {
+  const { data } = await apiClient.post("/products/import", { produits: products });
+  return data.data;
+}

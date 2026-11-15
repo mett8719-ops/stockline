@@ -172,15 +172,26 @@ export default function PosPage() {
                 value={query}
               />
             </div>
-            <Link to="/pos/history">
-              <button
-                type="button"
-                className="inline-flex min-h-11 items-center justify-center gap-2 rounded-xl border border-slate-200 bg-white px-3 text-sm font-medium text-slate-700 shadow-sm transition hover:bg-slate-50"
-              >
-                <History className="h-4 w-4" aria-hidden="true" />
-                Historique
-              </button>
-            </Link>
+            <div className="flex gap-2">
+              <Link to="/pos/mobile">
+                <button
+                  type="button"
+                  className="inline-flex min-h-11 items-center justify-center gap-2 rounded-xl border border-slate-200 bg-white px-3 text-sm font-medium text-slate-700 shadow-sm transition hover:bg-slate-50"
+                >
+                  <History className="h-4 w-4" aria-hidden="true" />
+                  Mobile
+                </button>
+              </Link>
+              <Link to="/pos/history">
+                <button
+                  type="button"
+                  className="inline-flex min-h-11 items-center justify-center gap-2 rounded-xl border border-slate-200 bg-white px-3 text-sm font-medium text-slate-700 shadow-sm transition hover:bg-slate-50"
+                >
+                  <History className="h-4 w-4" aria-hidden="true" />
+                  Historique
+                </button>
+              </Link>
+            </div>
           </div>
 
           <div className="mb-4 flex flex-wrap gap-2">

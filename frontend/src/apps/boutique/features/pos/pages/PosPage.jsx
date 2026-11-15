@@ -1,5 +1,6 @@
-import { Search, ShoppingCart, Trash2 } from "lucide-react";
+import { History, Search, ShoppingCart, Trash2 } from "lucide-react";
 import { useMemo, useState } from "react";
+import { Link } from "react-router-dom";
 import { parseApiError } from "@/core/api/errors.js";
 import { submitSaleToApi, getStockIssueNames } from "../services/submitSale.js";
 import { usePosCart } from "../store/cartStore.js";
@@ -159,16 +160,27 @@ export default function PosPage() {
     <main className="min-h-screen bg-slate-100 p-4">
       <div className="mx-auto grid max-w-[1360px] grid-cols-1 gap-4 xl:grid-cols-[minmax(0,2.15fr)_380px]">
         <section className="rounded-2xl border border-slate-200 bg-slate-50 p-4 shadow-sm">
-          <div className="mb-4 flex items-center gap-3 rounded-xl border border-slate-200 bg-white px-3 py-2.5 shadow-sm">
-            <Search className="h-4 w-4 text-slate-400" aria-hidden="true" />
-            <input
-              aria-label="Rechercher un produit"
-              className="w-full border-0 bg-transparent text-sm text-slate-700 outline-none placeholder:text-slate-400"
-              onChange={(event) => setQuery(event.target.value)}
-              placeholder="Rechercher un produit..."
-              type="search"
-              value={query}
-            />
+          <div className="mb-4 flex flex-col gap-3 md:flex-row md:items-center">
+            <div className="flex flex-1 items-center gap-3 rounded-xl border border-slate-200 bg-white px-3 py-2.5 shadow-sm">
+              <Search className="h-4 w-4 text-slate-400" aria-hidden="true" />
+              <input
+                aria-label="Rechercher un produit"
+                className="w-full border-0 bg-transparent text-sm text-slate-700 outline-none placeholder:text-slate-400"
+                onChange={(event) => setQuery(event.target.value)}
+                placeholder="Rechercher un produit..."
+                type="search"
+                value={query}
+              />
+            </div>
+            <Link to="/pos/history">
+              <button
+                type="button"
+                className="inline-flex min-h-11 items-center justify-center gap-2 rounded-xl border border-slate-200 bg-white px-3 text-sm font-medium text-slate-700 shadow-sm transition hover:bg-slate-50"
+              >
+                <History className="h-4 w-4" aria-hidden="true" />
+                Historique
+              </button>
+            </Link>
           </div>
 
           <div className="mb-4 flex flex-wrap gap-2">

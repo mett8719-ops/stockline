@@ -6,6 +6,11 @@ const routes = [
     element: <DocumentsRoute />,
     permission: "documents",
   },
+  {
+    path: "/documents/:id",
+    element: <DocumentsRoute />,
+    permission: "documents",
+  },
 ];
 
 export default routes;

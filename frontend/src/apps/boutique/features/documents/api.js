@@ -1,5 +1,9 @@
 import apiClient from "@/core/api/client.js";
-import { validateDocumentsResponse } from "./schemas.js";
+import {
+  validateDocumentConversion,
+  validateDocumentDetail,
+  validateDocumentsResponse,
+} from "./schemas.js";
 
 function isRecord(value) {
   return value !== null && typeof value === "object" && !Array.isArray(value);
@@ -77,4 +81,16 @@ export async function createDocument(document) {
   }
 
   return createdDocument;
+}
+
+export async function getDocument(id) {
+  const response = await apiClient.get(`/documents/${encodeURIComponent(id)}`);
+  return validateDocumentDetail(response.data?.data);
+}
+
+export async function convertDocumentQuote(id) {
+  const response = await apiClient.post(
+    `/documents/${encodeURIComponent(id)}/convert`,
+  );
+  return validateDocumentConversion(response.data?.data);
 }

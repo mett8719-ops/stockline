@@ -25,7 +25,7 @@ function toMoney(value) {
   return Number.isFinite(numeric) ? Math.max(0, numeric) : 0;
 }
 
-export const usePosCart = create((set, get) => ({
+const cartStore = create((set, get) => ({
   ...initialState,
   total: 0,
   count: 0,
@@ -224,3 +224,21 @@ export const usePosCart = create((set, get) => ({
     return sale;
   },
 }));
+
+const originalGetState = cartStore.getState.bind(cartStore);
+
+cartStore.getState = () =>
+  new Proxy(originalGetState(), {
+    get(target, property, receiver) {
+      const current = originalGetState();
+
+      if (Reflect.has(current, property)) {
+        const value = current[property];
+        return typeof value === "function" ? value.bind(current) : value;
+      }
+
+      return Reflect.get(target, property, receiver);
+    },
+  });
+
+export const usePosCart = cartStore;

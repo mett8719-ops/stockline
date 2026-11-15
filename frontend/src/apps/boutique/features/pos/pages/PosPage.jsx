@@ -1,5 +1,7 @@
 import { Search, ShoppingCart, Trash2 } from "lucide-react";
 import { useMemo, useState } from "react";
+import { parseApiError } from "@/core/api/errors.js";
+import { submitSaleToApi, getStockIssueNames } from "../services/submitSale.js";
 import { usePosCart } from "../store/cartStore.js";
 
 const categories = [
@@ -104,14 +106,28 @@ export default function PosPage() {
     });
   }, [activeCategory, query]);
 
-  function handleSubmitSale() {
+  async function handleSubmitSale() {
     try {
-      const sale = submitSale();
+      const sale = await submitSaleToApi({
+        items,
+        total,
+        client,
+        selectedPayment,
+        paymentBreakdown,
+        paymentAmount,
+      });
       setCheckoutError("");
       setCheckoutOpen(false);
       console.info("Vente validée", sale);
+      submitSale();
     } catch (error) {
-      setCheckoutError(error.message || "La vente ne peut pas être validée.");
+      const apiError = parseApiError(error);
+      const stockIssues = getStockIssueNames(error);
+      setCheckoutError(
+        stockIssues.length > 0
+          ? `${apiError.message} • ${stockIssues.join(", ")}`
+          : apiError.message,
+      );
     }
   }
 

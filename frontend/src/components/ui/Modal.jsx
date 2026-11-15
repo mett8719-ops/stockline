@@ -28,6 +28,7 @@ export default function Modal({
   description,
   children,
   footer,
+  footerClassName,
   size = "md",
   closeOnOverlayClick = true,
   showCloseButton = true,
@@ -161,7 +162,12 @@ export default function Modal({
         </header>
         <div className="px-5 py-5 sm:px-6">{children}</div>
         {footer && (
-          <footer className="flex flex-col-reverse gap-2 border-t border-slate-100 px-5 py-4 sm:flex-row sm:justify-end sm:px-6">
+          <footer
+            className={cn(
+              "flex flex-col-reverse gap-2 border-t border-slate-100 px-5 py-4 sm:flex-row sm:justify-end sm:px-6",
+              footerClassName,
+            )}
+          >
             {footer}
           </footer>
         )}

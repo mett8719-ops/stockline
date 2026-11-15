@@ -37,3 +37,16 @@ export function validateTreasuryTransaction(values) {
 
   return errors;
 }
+
+export function validateCashSessionAmount(value, { required = false } = {}) {
+  if (typeof value !== "string" || value.trim() === "") {
+    return required ? "Saisissez un montant." : "";
+  }
+
+  const amount = Number(value);
+  if (!Number.isFinite(amount) || amount < 0) {
+    return "Saisissez un montant positif ou nul.";
+  }
+
+  return "";
+}

@@ -1,6 +1,8 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 import { validateTreasuryTransaction } from "../src/apps/boutique/features/treasury/schemas.js";
+import { validateCashSessionAmount } from "../src/apps/boutique/features/treasury/schemas.js";
+import { buildTreasuryCsv } from "../src/apps/boutique/features/treasury/utils/exportCsv.js";
 
 test("valid treasury income transaction has no validation errors", () => {
   assert.deepEqual(
@@ -44,4 +46,34 @@ test("invalid treasury transaction reports actionable field errors", () => {
       categorie: "La catégorie ne peut pas dépasser 60 caractères.",
     },
   );
+});
+
+test("cash session fund accepts zero for opening and requires a closing count", () => {
+  assert.equal(validateCashSessionAmount(""), "");
+  assert.equal(validateCashSessionAmount("0"), "");
+  assert.equal(validateCashSessionAmount("", { required: true }), "Saisissez un montant.");
+  assert.equal(validateCashSessionAmount("-1"), "Saisissez un montant positif ou nul.");
+});
+
+test("treasury CSV includes totals, preserves accents, and neutralizes formulas", () => {
+  const csv = buildTreasuryCsv({
+    lignes: [
+      {
+        date: "2026-11-15",
+        libelle: '=IMPORTXML("https://example.invalid","//a")',
+        categorie: "Loyer",
+        modePaiement: "especes",
+        debit: 15000,
+        credit: 0,
+        auteur: "Équipe",
+      },
+    ],
+    totaux: { debit: 15000, credit: 0 },
+  });
+
+  assert.ok(csv.startsWith("\uFEFF"));
+  assert.match(csv, /"Date";"Libellé";"Catégorie";"Mode de paiement"/);
+  assert.match(csv, /"'=IMPORTXML/);
+  assert.match(csv, /"Équipe"/);
+  assert.match(csv, /"Totaux";"15000";"0"/);
 });

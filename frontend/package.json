@@ -4,11 +4,11 @@
   "version": "0.0.0",
   "type": "module",
   "scripts": {
-    "dev": "vite",
-    "build": "vite build",
+    "dev": "node ./scripts/run-vite.mjs dev",
+    "build": "node ./scripts/run-vite.mjs build",
     "lint": "oxlint",
     "test": "node --test",
-    "preview": "vite preview"
+    "preview": "node ./scripts/run-vite.mjs preview"
   },
   "dependencies": {
     "@tanstack/react-query": "^5.105.1",

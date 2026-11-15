@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { lazy, Suspense, useState } from "react";
 import {
   FileText,
   Plus,
@@ -20,6 +20,10 @@ import {
   documentTypeLabels,
 } from "@/core/utils/labels.js";
 import { useDocuments } from "../hooks.js";
+
+const CreateDocumentModal = lazy(
+  () => import("../components/CreateDocumentModal.jsx"),
+);
 
 const PAGE_SIZE = 10;
 
@@ -147,6 +151,7 @@ export default function DocumentsPage() {
   const [activeTab, setActiveTab] = useState("tous");
   const [search, setSearch] = useState("");
   const [page, setPage] = useState(1);
+  const [isCreateOpen, setIsCreateOpen] = useState(false);
   const debouncedSearch = useDebounce(search.trim(), 300);
   const type = activeTab === "tous" ? undefined : activeTab;
   const { data, error, isError, isFetching, isPending, refetch } = useDocuments({
@@ -174,8 +179,7 @@ export default function DocumentsPage() {
           </div>
           <Button
             className="w-full sm:w-auto"
-            disabled
-            title="La création de documents sera disponible dans ME-07."
+            onClick={() => setIsCreateOpen(true)}
           >
             <Plus aria-hidden="true" className="h-4 w-4" />
             Nouveau document
@@ -344,6 +348,19 @@ export default function DocumentsPage() {
           )}
         </section>
       </div>
+      {isCreateOpen && (
+        <Suspense fallback={null}>
+          <CreateDocumentModal
+            isOpen
+            onClose={() => setIsCreateOpen(false)}
+            onCreated={(createdType) => {
+              setActiveTab(createdType);
+              setPage(1);
+              setIsCreateOpen(false);
+            }}
+          />
+        </Suspense>
+      )}
     </main>
   );
 }

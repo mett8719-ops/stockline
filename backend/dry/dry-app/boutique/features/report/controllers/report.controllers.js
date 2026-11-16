@@ -120,11 +120,14 @@ const dashboard = asyncHandler(async (req, res) => {
     ]),
 
     // ── Dernieres ventes du jour (tableau du bas) ─────────────────────
-    SaleModel.find(tenantScope(req, { date: { $gte: aujourdhui } }))
-      .sort({ date: -1 })
-      .limit(10)
-      .select("reference date caissierNom montantTotal paiements statut")
-      .lean(),
+    // Aggregate() plutot que find() : sanitizeFilter global cause un CastError
+    // quand Mongoose tente de caster la Date dans le filtre find().
+    SaleModel.aggregate([
+      { $match: tenantScope(req, { date: { $gte: aujourdhui } }) },
+      { $sort: { date: -1 } },
+      { $limit: 10 },
+      { $project: { reference: 1, date: 1, caissierNom: 1, montantTotal: 1, paiements: 1, statut: 1 } },
+    ]),
 
     // ── Alertes de stock bas ──────────────────────────────────────────
     stockService.produitsEnAlerte(req.user.shopId, 5),

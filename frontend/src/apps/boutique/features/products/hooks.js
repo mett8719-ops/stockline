@@ -1,4 +1,5 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { authStore } from "@/core/store/authStore.js";
 import {
   createProduct,
   deactivateProduct,
@@ -51,7 +52,11 @@ export function useSaveProduct() {
       productId
         ? updateProduct({ productId, product })
         : createProduct(product),
-    onSuccess: async () => {
+    onSuccess: async (_data, variables) => {
+      if (!variables.productId) {
+        authStore.getState().markOnboardingStepComplete("premierProduit");
+      }
+
       await Promise.all([
         queryClient.invalidateQueries({ queryKey: productKeys.all }),
         queryClient.invalidateQueries({ queryKey: productKeys.categories }),
@@ -65,7 +70,11 @@ export function useImportProducts() {
 
   return useMutation({
     mutationFn: importProducts,
-    onSuccess: async () => {
+    onSuccess: async (report) => {
+      if (report.crees > 0) {
+        authStore.getState().markOnboardingStepComplete("premierProduit");
+      }
+
       await Promise.all([
         queryClient.invalidateQueries({ queryKey: productKeys.all }),
         queryClient.invalidateQueries({ queryKey: productKeys.categories }),

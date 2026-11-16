@@ -40,6 +40,36 @@ export const authStore = create((set, get) => ({
 
   setBlockingStatus: (blockingStatus) => set({ blockingStatus }),
 
+  markGuidedTourComplete: () =>
+    set((state) => ({
+      user: state.user
+        ? { ...state.user, aTermineVisiteGuidee: true }
+        : state.user,
+    })),
+
+  markOnboardingStepComplete: (step) =>
+    set((state) => {
+      if (!state.shop) return state;
+
+      const etapesOnboarding = {
+        ...state.shop.etapesOnboarding,
+        [step]: true,
+      };
+      const onboardingTermine = [
+        etapesOnboarding.logoAjoute || Boolean(state.shop.logoUrl),
+        etapesOnboarding.premierProduit,
+        etapesOnboarding.employeInvite,
+      ].every(Boolean);
+
+      return {
+        shop: {
+          ...state.shop,
+          etapesOnboarding,
+          onboardingTermine,
+        },
+      };
+    }),
+
   setAccessToken: (accessToken) => {
     set({ accessToken });
 

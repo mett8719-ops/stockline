@@ -11,6 +11,7 @@ import {
 import { Link } from "react-router-dom";
 import { parseApiError } from "@/core/api/errors.js";
 import { useAuth } from "@/core/hooks/useAuth.js";
+import OnboardingChecklist from "../../onboarding/components/OnboardingChecklist.jsx";
 import { useDashboard } from "../hooks.js";
 
 const SalesChart = lazy(() => import("../components/SalesChart.jsx"));
@@ -193,7 +194,7 @@ function LoadingDashboard() {
 }
 
 export default function DashboardPage() {
-  const { user, shop } = useAuth();
+  const { user, shop, permissions } = useAuth();
   const dashboardQuery = useDashboard();
   const data = dashboardQuery.data;
   const [now] = useState(() => new Date());
@@ -256,6 +257,13 @@ export default function DashboardPage() {
         <p className="rounded-lg bg-amber-50 px-4 py-3 text-sm text-amber-800" role="alert">
           Actualisation impossible : {parseApiError(dashboardQuery.error).message}
         </p>
+      )}
+
+      {shop && !shop.onboardingTermine && (
+        <OnboardingChecklist
+          canManageProducts={user?.role === "admin" || permissions.includes("products")}
+          shop={shop}
+        />
       )}
 
       <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">

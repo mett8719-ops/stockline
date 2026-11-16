@@ -4,6 +4,7 @@ import {
   fetchInventory,
   recordInventoryCount,
   startInventory,
+  closeInventory,
 } from "./api.js";
 
 const inventoryKeys = {
@@ -50,6 +51,22 @@ export function useRecordInventoryCount(inventoryId) {
         queryClient.invalidateQueries({
           queryKey: inventoryKeys.detail(inventoryId),
         }),
+      ]);
+    },
+  });
+}
+
+export function useCloseInventory() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: closeInventory,
+    onSuccess: async () => {
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: inventoryKeys.all }),
+        queryClient.invalidateQueries({ queryKey: ["stock"] }),
+        queryClient.invalidateQueries({ queryKey: ["products"] }),
+        queryClient.invalidateQueries({ queryKey: ["reports", "dashboard"] }),
       ]);
     },
   });

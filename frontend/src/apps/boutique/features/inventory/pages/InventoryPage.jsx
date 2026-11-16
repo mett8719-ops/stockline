@@ -7,9 +7,11 @@ import {
   Search,
 } from "lucide-react";
 import { parseApiError } from "@/core/api/errors.js";
+import InventoryCloseDialog from "../components/InventoryCloseDialog.jsx";
 import InventoryCountField from "../components/InventoryCountField.jsx";
 import { inventoryCountSchema } from "../schemas.js";
 import {
+  useCloseInventory,
   useInventories,
   useInventory,
   useRecordInventoryCount,
@@ -110,6 +112,9 @@ export default function InventoryPage() {
   const [savingProductIds, setSavingProductIds] = useState([]);
   const [startError, setStartError] = useState("");
   const [notice, setNotice] = useState("");
+  const [isCloseDialogOpen, setIsCloseDialogOpen] = useState(false);
+  const [closeError, setCloseError] = useState("");
+  const [closeResult, setCloseResult] = useState(null);
   const savingIdsRef = useRef(new Set());
   const inventoriesQuery = useInventories(page);
   const inventorySummary = inventoriesQuery.data;
@@ -122,6 +127,7 @@ export default function InventoryPage() {
   const { mutateAsync: saveInventoryCount } =
     useRecordInventoryCount(activeInventoryId);
   const startInventoryMutation = useStartInventory();
+  const closeInventoryMutation = useCloseInventory();
   const lines = Array.isArray(activeInventoryDetails?.lignes)
     ? activeInventoryDetails.lignes
     : emptyLines;
@@ -200,6 +206,7 @@ export default function InventoryPage() {
   async function handleStartInventory() {
     setStartError("");
     setNotice("");
+    setCloseResult(null);
 
     try {
       await startInventoryMutation.mutateAsync();
@@ -216,6 +223,20 @@ export default function InventoryPage() {
 
   function showInventoryHistory() {
     setView("history");
+  }
+
+  async function handleCloseInventory() {
+    setCloseError("");
+
+    try {
+      const result = await closeInventoryMutation.mutateAsync(activeInventoryId);
+      setCloseResult(result);
+      setNotice("");
+      setView("history");
+      setIsCloseDialogOpen(false);
+    } catch (error) {
+      setCloseError(parseApiError(error).message);
+    }
   }
 
   if (inventoriesQuery.isPending) return <LoadingInventory />;
@@ -267,9 +288,12 @@ export default function InventoryPage() {
               Historique
             </button>
             <button
-              className="inline-flex h-10 items-center justify-center gap-2 rounded-lg bg-emerald-600 px-4 text-sm font-semibold text-white opacity-60"
-              disabled
-              title="La clôture sera disponible à la tâche DJ-12."
+              className="inline-flex h-10 items-center justify-center gap-2 rounded-lg bg-emerald-600 px-4 text-sm font-semibold text-white transition hover:bg-emerald-700 focus:outline-none focus:ring-2 focus:ring-emerald-200 disabled:cursor-not-allowed disabled:opacity-60"
+              disabled={closeInventoryMutation.isPending}
+              onClick={() => {
+                setCloseError("");
+                setIsCloseDialogOpen(true);
+              }}
               type="button"
             >
               Clôturer l’inventaire
@@ -312,6 +336,43 @@ export default function InventoryPage() {
         <p className="rounded-lg bg-emerald-50 px-4 py-3 text-sm text-emerald-700" role="status">
           {notice}
         </p>
+      )}
+      {showHistoryView && closeResult?.rapport && (
+        <section
+          aria-label="Rapport de clôture de l’inventaire"
+          className="rounded-xl border border-emerald-200 bg-emerald-50 p-4"
+          role="status"
+        >
+          <h3 className="font-semibold text-emerald-900">
+            {closeResult.message || "Inventaire clôturé avec succès."}
+          </h3>
+          <dl className="mt-3 grid gap-3 text-sm sm:grid-cols-2 lg:grid-cols-4">
+            <div>
+              <dt className="text-emerald-700">Articles comptés</dt>
+              <dd className="mt-1 font-semibold text-emerald-950">
+                {formatQuantity(closeResult.rapport.articlesComptes)}
+              </dd>
+            </div>
+            <div>
+              <dt className="text-emerald-700">Écarts détectés</dt>
+              <dd className="mt-1 font-semibold text-emerald-950">
+                {formatQuantity(closeResult.rapport.nombreEcarts)}
+              </dd>
+            </div>
+            <div>
+              <dt className="text-emerald-700">Déficit total</dt>
+              <dd className="mt-1 font-semibold text-emerald-950">
+                {formatCurrency(closeResult.rapport.deficitTotal)}
+              </dd>
+            </div>
+            <div>
+              <dt className="text-emerald-700">Ajustements appliqués</dt>
+              <dd className="mt-1 font-semibold text-emerald-950">
+                {formatQuantity(closeResult.rapport.ajustementsAppliques)}
+              </dd>
+            </div>
+          </dl>
+        </section>
       )}
 
       {showHistoryView && (
@@ -630,6 +691,16 @@ export default function InventoryPage() {
             </nav>
           )}
         </section>
+      )}
+      {isCloseDialogOpen && activeInventoryDetails && (
+        <InventoryCloseDialog
+          articlesComptes={activeInventoryDetails.articlesComptes}
+          error={closeError}
+          isPending={closeInventoryMutation.isPending}
+          nombreEcarts={activeInventoryDetails.nombreEcarts}
+          onCancel={() => setIsCloseDialogOpen(false)}
+          onConfirm={handleCloseInventory}
+        />
       )}
     </section>
   );

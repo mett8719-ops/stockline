@@ -35,3 +35,10 @@ export async function recordInventoryCount({
   );
   return data.data;
 }
+
+export async function closeInventory(inventoryId) {
+  const { data } = await apiClient.post(
+    `/inventories/${inventoryId}/close`,
+  );
+  return data.data;
+}

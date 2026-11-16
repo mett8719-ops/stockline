@@ -222,6 +222,7 @@ async function produitsEnAlerte(shopId, limite = 20) {
     seuilAlerte: { $gt: 0 },
     $expr: { $lte: ["$stockActuel", "$seuilAlerte"] },
   })
+    .setOptions({ sanitizeFilter: false })
     .sort({ stockActuel: 1 })
     .limit(limite)
     .select("nom stockActuel seuilAlerte unite categorieNom")

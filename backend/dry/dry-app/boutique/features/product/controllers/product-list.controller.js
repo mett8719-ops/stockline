@@ -28,9 +28,11 @@ module.exports = asyncHandler(async (req, res) => {
 
   // ── Recherche instantanee : nom, reference ou code-barres ───────────
   if (q) {
+    const escaped = q.replace(/[-[\]{}()*+?.,\\^$|#\s]/g, "\\$&");
+    const regex = new RegExp(escaped, "i");
     criteres.$or = [
-      { nom: { $regex: q, $options: "i" } },
-      { sku: { $regex: q, $options: "i" } },
+      { nom: regex },
+      { sku: regex },
       { codeBarre: q },   // egalite stricte : un code-barres est exact
     ];
   }
@@ -54,12 +56,13 @@ module.exports = asyncHandler(async (req, res) => {
 
   const [produits, total] = await Promise.all([
     ProductModel.find(filtre)
+      .setOptions({ sanitizeFilter: false })
       .sort(sort || "nom")
       .skip((page - 1) * limit)
       .limit(limit)
       // `virtuals: true` : inclut marge, margePourcent et statutStock
       .lean({ virtuals: true }),
-    ProductModel.countDocuments(filtre),
+    ProductModel.countDocuments(filtre).setOptions({ sanitizeFilter: false }),
   ]);
 
   return success(res, produits, 200, paginationMeta(page, limit, total));

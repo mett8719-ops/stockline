@@ -85,6 +85,16 @@ const importBulk = asyncHandler(async (req, res) => {
 
   for (const [index, ligne] of produits.entries()) {
     try {
+      // Validation de la longueur du SKU (alignee sur la limite de 40 caracteres du produit)
+      if (ligne.sku && ligne.sku.length > 40) {
+        rapport.erreurs.push({
+          ligne: index + 1,
+          nom: ligne.nom,
+          raison: "La reference (SKU) depasse la limite autorisee de 40 caracteres",
+        });
+        continue;
+      }
+
       // Doublon de reference : on ignore sans faire echouer l'import
       if (ligne.sku) {
         const existe = await ProductModel.findOne(
@@ -116,6 +126,7 @@ const importBulk = asyncHandler(async (req, res) => {
         tenantPayload(req, {
           nom: ligne.nom,
           sku: ligne.sku,
+          codeBarre: ligne.codeBarre,
           categorieId,
           categorieNom: ligne.categorieNom,
           unite: ligne.unite || "piece",

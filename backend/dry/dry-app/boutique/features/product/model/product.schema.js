@@ -85,6 +85,7 @@ const importProductsSchema = z
         z.object({
           nom: safeText(150),
           sku: z.string().trim().optional(),
+          codeBarre: z.string().trim().max(60).optional(),
           categorieNom: safeText(60).optional(),
           unite: safeText(20).optional(),
           prixAchat: money,

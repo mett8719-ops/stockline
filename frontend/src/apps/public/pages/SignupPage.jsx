@@ -2,6 +2,7 @@ import { useState } from "react";
 import { ArrowLeft, ArrowRight, Eye, EyeOff, Globe, PhoneCall, Sparkles, Store } from "lucide-react";
 import { Link } from "react-router-dom";
 import PasswordStrength from "../components/PasswordStrength.jsx";
+import { isStrongPassword } from "../components/password-rules.js";
 import SignupStepper from "../features/signup/components/SignupStepper.jsx";
 import {
   africaCountries,
@@ -9,8 +10,11 @@ import {
   capitalizeFirst,
   congoCities,
   congoOperators,
+  formatPhoneInput,
   getFieldErrors,
+  isValidPhone,
   ownerSignupSchema,
+  SAFE_TEXT_RE,
   shopSignupSchema,
 } from "../features/signup/schemas.js";
 import { useSignupStore } from "../features/signup/store.js";
@@ -70,6 +74,7 @@ export default function SignupPage() {
   const [isPasswordVisible, setIsPasswordVisible] = useState(false);
   const [fieldErrors, setFieldErrors] = useState({});
   const [formError, setFormError] = useState("");
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   // Gestion de la saisie personnalisée si ville = "Autre ville"
   const isCongo = (shopValues.pays || "CG") === "CG";
@@ -95,18 +100,55 @@ export default function SignupPage() {
 
   function applyPhonePrefix(prefix) {
     const currentNumber = ownerValues.telephone || "";
-    // Si le numéro commence déjà par un +, on retire l'ancien préfixe ou on remplace
-    const cleaned = currentNumber.replace(/^\+?[0-9\s]+(?=[\s]|$)/, "").trim();
-    const newPhone = cleaned ? `${prefix} ${cleaned}` : `${prefix} `;
-    updateOwnerField("telephone", newPhone);
+    // Extrait les chiffres locaux déjà tapés
+    const cleanDigits = currentNumber.replace(/\D/g, "");
+    let nationalPart = "";
+    if (cleanDigits.startsWith("242")) {
+      nationalPart = cleanDigits.slice(3);
+    } else {
+      nationalPart = cleanDigits;
+    }
+    // Si la partie locale commence déjà par le même code réseau (ex. 06), on la conserve
+    const targetDigits = (prefix.replace(/\D/g, "").slice(3) || "");
+    if (nationalPart.startsWith(targetDigits)) {
+      nationalPart = nationalPart.slice(targetDigits.length);
+    }
+    const candidate = `${prefix} ${nationalPart}`.trim();
+    const formatted = formatPhoneInput(candidate, shopValues.pays || "CG");
+    updateOwnerField("telephone", formatted);
   }
+
+  // Validation dynamique de l'Étape 1 (Boutique)
+  const isStep1Valid = Boolean(
+    shopValues.nom?.trim().length >= 2 &&
+    SAFE_TEXT_RE.test(shopValues.nom?.trim()) &&
+    shopValues.typeActivite &&
+    (shopValues.typeActivite !== "autre" || (shopValues.autreActivite?.trim().length >= 2 && SAFE_TEXT_RE.test(shopValues.autreActivite?.trim()))) &&
+    shopValues.pays &&
+    shopValues.ville?.trim().length >= 2 &&
+    SAFE_TEXT_RE.test(shopValues.ville?.trim())
+  );
+
+  // Validation dynamique de l'Étape 2 (Propriétaire)
+  const isStep2Valid = Boolean(
+    ownerValues.nomComplet?.trim().length >= 2 &&
+    SAFE_TEXT_RE.test(ownerValues.nomComplet?.trim()) &&
+    ownerValues.email?.trim() &&
+    /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(ownerValues.email?.trim()) &&
+    isStrongPassword(password) &&
+    isValidPhone(ownerValues.telephone, shopValues.pays || "CG")
+  );
 
   function continueToOwner(event) {
     event.preventDefault();
+    if (!isStep1Valid || isSubmitting) return;
+
+    setIsSubmitting(true);
     const result = shopSignupSchema.safeParse(shopValues);
 
     if (!result.success) {
       setFieldErrors(getFieldErrors(result.error));
+      setIsSubmitting(false);
       return;
     }
 
@@ -114,10 +156,14 @@ export default function SignupPage() {
     setShopValues(result.data);
     setFieldErrors({});
     setStep(2);
+    setIsSubmitting(false);
   }
 
   function continueToPlan(event) {
     event.preventDefault();
+    if (!isStep2Valid || isSubmitting) return;
+
+    setIsSubmitting(true);
     const result = ownerSignupSchema.safeParse({
       ...ownerValues,
       motDePasse: password,
@@ -125,6 +171,7 @@ export default function SignupPage() {
 
     if (!result.success) {
       setFieldErrors(getFieldErrors(result.error));
+      setIsSubmitting(false);
       return;
     }
 
@@ -137,6 +184,7 @@ export default function SignupPage() {
     setFieldErrors({});
     setFormError("");
     setStep(3);
+    setIsSubmitting(false);
   }
 
   const selectedCountry = africaCountries.find((c) => c.value === (shopValues.pays || "CG"));
@@ -212,7 +260,7 @@ export default function SignupPage() {
                         className="text-sm font-medium text-slate-800"
                         htmlFor="shop-name"
                       >
-                        Nom de la boutique
+                        Nom de la boutique <span className="text-red-500">*</span>
                       </label>
                       <input
                         aria-describedby={fieldErrors.nom ? "shop-name-error" : undefined}
@@ -240,7 +288,7 @@ export default function SignupPage() {
                         htmlFor="shop-country"
                       >
                         <Globe aria-hidden="true" className="text-slate-500" size={15} />
-                        Pays d’implantation
+                        Pays d’implantation <span className="text-red-500">*</span>
                       </label>
                       <select
                         aria-describedby={fieldErrors.pays ? "shop-country-error" : undefined}
@@ -277,7 +325,7 @@ export default function SignupPage() {
                         className="text-sm font-medium text-slate-800"
                         htmlFor="shop-type"
                       >
-                        Type d’activité
+                        Type d’activité <span className="text-red-500">*</span>
                       </label>
                       <select
                         aria-describedby={
@@ -322,7 +370,7 @@ export default function SignupPage() {
                           htmlFor="shop-other-type"
                         >
                           <Sparkles aria-hidden="true" className="text-brand-600" size={15} />
-                          Précisez votre activité
+                          Précisez votre activité <span className="text-red-500">*</span>
                         </label>
                         <p className="mt-0.5 text-xs text-brand-700">
                           Décrivez la spécialité de votre commerce (ex. Salon de coiffure, Boulangerie, Atelier de couture...).
@@ -344,13 +392,13 @@ export default function SignupPage() {
                       </div>
                     )}
 
-                    {/* Ville (avec gestion spécifique Congo vs autre pays) */}
+                    {/* Ville */}
                     <div>
                       <label
                         className="text-sm font-medium text-slate-800"
                         htmlFor="shop-city"
                       >
-                        Ville
+                        Ville <span className="text-red-500">*</span>
                       </label>
                       {isCongo && !isCustomCity ? (
                         <select
@@ -421,14 +469,24 @@ export default function SignupPage() {
                       </p>
                     )}
 
-                    <div className="flex justify-end border-t border-slate-100 pt-5">
+                    <div className="flex flex-col items-end gap-2 border-t border-slate-100 pt-5">
                       <button
-                        className="inline-flex min-h-11 items-center justify-center gap-2 rounded-lg bg-brand-600 px-5 py-2.5 text-sm font-semibold text-white transition hover:bg-brand-700 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-600"
+                        className={`inline-flex min-h-11 items-center justify-center gap-2 rounded-lg bg-brand-600 px-5 py-2.5 text-sm font-semibold text-white transition hover:bg-brand-700 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-600 ${
+                          !isStep1Valid || isSubmitting
+                            ? "cursor-not-allowed opacity-50 hover:bg-brand-600"
+                            : ""
+                        }`}
+                        disabled={!isStep1Valid || isSubmitting}
                         type="submit"
                       >
                         Continuer
                         <ArrowRight aria-hidden="true" size={16} />
                       </button>
+                      {!isStep1Valid && (
+                        <p className="text-xs text-slate-400">
+                          Remplissez tous les champs obligatoires (*) pour continuer
+                        </p>
+                      )}
                     </div>
                   </form>
                 </>
@@ -459,7 +517,7 @@ export default function SignupPage() {
                         className="text-sm font-medium text-slate-800"
                         htmlFor="owner-name"
                       >
-                        Nom complet
+                        Nom complet <span className="text-red-500">*</span>
                       </label>
                       <input
                         aria-describedby={
@@ -492,7 +550,7 @@ export default function SignupPage() {
                         className="text-sm font-medium text-slate-800"
                         htmlFor="owner-email"
                       >
-                        Adresse email
+                        Adresse email <span className="text-red-500">*</span>
                       </label>
                       <input
                         aria-describedby={fieldErrors.email ? "owner-email-error" : undefined}
@@ -515,7 +573,7 @@ export default function SignupPage() {
                       <FieldError id="owner-email-error" message={fieldErrors.email} />
                     </div>
 
-                    {/* Téléphone avec initiatives opérateurs et indicatifs */}
+                    {/* Téléphone : filtrage sans lettres et formatage par pays */}
                     <div>
                       <div className="flex items-center justify-between">
                         <label
@@ -542,11 +600,12 @@ export default function SignupPage() {
                         }`}
                         id="owner-phone"
                         inputMode="tel"
-                        maxLength={20}
-                        onChange={(event) =>
-                          updateOwnerField("telephone", event.target.value)
-                        }
-                        placeholder={selectedCountry?.dialCode ? `${selectedCountry.dialCode} 06 123 45 67` : "+242 06 123 45 67"}
+                        maxLength={22}
+                        onChange={(event) => {
+                          const formatted = formatPhoneInput(event.target.value, shopValues.pays || "CG");
+                          updateOwnerField("telephone", formatted);
+                        }}
+                        placeholder={selectedCountry?.placeholder || "+242 06 123 45 67"}
                         type="tel"
                         value={ownerValues.telephone || ""}
                       />
@@ -555,11 +614,11 @@ export default function SignupPage() {
                         message={fieldErrors.telephone}
                       />
 
-                      {/* Raccourcis opérateurs locaux pour fluidifier la saisie */}
+                      {/* Raccourcis opérateurs réels : MTN 06, Airtel 05, Airtel Pro 04 */}
                       <div className="mt-2 flex flex-wrap items-center gap-1.5">
                         <span className="flex items-center gap-1 text-[11px] text-slate-500">
                           <PhoneCall aria-hidden="true" size={12} />
-                          Raccourcis :
+                          Opérateurs :
                         </span>
                         {isCongo ? (
                           congoOperators.map(({ label, prefix }) => (
@@ -578,7 +637,7 @@ export default function SignupPage() {
                             onClick={() => applyPhonePrefix(selectedCountry.dialCode)}
                             type="button"
                           >
-                            Indicatif {selectedCountry.label} ({selectedCountry.dialCode})
+                            Indicatif ({selectedCountry.dialCode})
                           </button>
                         ) : null}
                       </div>
@@ -589,7 +648,7 @@ export default function SignupPage() {
                         className="text-sm font-medium text-slate-800"
                         htmlFor="owner-password"
                       >
-                        Mot de passe
+                        Mot de passe <span className="text-red-500">*</span>
                       </label>
                       <div className="relative">
                         <input
@@ -654,7 +713,7 @@ export default function SignupPage() {
                       </p>
                     )}
 
-                    <div className="flex flex-col-reverse justify-between gap-3 border-t border-slate-100 pt-5 sm:flex-row">
+                    <div className="flex flex-col-reverse justify-between gap-3 border-t border-slate-100 pt-5 sm:flex-row sm:items-center">
                       <button
                         className="inline-flex min-h-11 items-center justify-center gap-2 rounded-lg border border-slate-200 bg-white px-4 py-2.5 text-sm font-semibold text-slate-700 transition hover:bg-slate-50 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-600"
                         onClick={() => {
@@ -667,13 +726,25 @@ export default function SignupPage() {
                         <ArrowLeft aria-hidden="true" size={16} />
                         Retour
                       </button>
-                      <button
-                        className="inline-flex min-h-11 items-center justify-center gap-2 rounded-lg bg-brand-600 px-5 py-2.5 text-sm font-semibold text-white transition hover:bg-brand-700 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-600"
-                        type="submit"
-                      >
-                        Continuer
-                        <ArrowRight aria-hidden="true" size={16} />
-                      </button>
+                      <div className="flex flex-col items-end gap-1.5">
+                        <button
+                          className={`inline-flex min-h-11 items-center justify-center gap-2 rounded-lg bg-brand-600 px-5 py-2.5 text-sm font-semibold text-white transition hover:bg-brand-700 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-600 ${
+                            !isStep2Valid || isSubmitting
+                              ? "cursor-not-allowed opacity-50 hover:bg-brand-600"
+                              : ""
+                          }`}
+                          disabled={!isStep2Valid || isSubmitting}
+                          type="submit"
+                        >
+                          Continuer
+                          <ArrowRight aria-hidden="true" size={16} />
+                        </button>
+                        {!isStep2Valid && (
+                          <p className="text-xs text-slate-400">
+                            Complétez les coordonnées et sécurisez le mot de passe pour continuer
+                          </p>
+                        )}
+                      </div>
                     </div>
                   </form>
                 </>

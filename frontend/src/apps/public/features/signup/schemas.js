@@ -10,33 +10,37 @@ export const businessTypes = [
   { value: "autre", label: "Autre activité" },
 ];
 
-/** Pays d'Afrique centrale et de l'Ouest pris en charge. */
+/** Pays d'Afrique centrale et de l'Ouest pris en charge avec métadonnées téléphoniques. */
 export const africaCountries = [
-  { value: "CG", label: "🇨🇬 Congo (Brazzaville)", dialCode: "+242" },
-  { value: "CD", label: "🇨🇩 RDC (Kinshasa)",       dialCode: "+243" },
-  { value: "CM", label: "🇨🇲 Cameroun",              dialCode: "+237" },
-  { value: "GA", label: "🇬🇦 Gabon",                 dialCode: "+241" },
-  { value: "CF", label: "🇨🇫 Centrafrique",          dialCode: "+236" },
-  { value: "CI", label: "🇨🇮 Côte d'Ivoire",         dialCode: "+225" },
-  { value: "SN", label: "🇸🇳 Sénégal",               dialCode: "+221" },
-  { value: "ML", label: "🇲🇱 Mali",                  dialCode: "+223" },
-  { value: "BF", label: "🇧🇫 Burkina Faso",          dialCode: "+226" },
-  { value: "TG", label: "🇹🇬 Togo",                  dialCode: "+228" },
-  { value: "BJ", label: "🇧🇯 Bénin",                 dialCode: "+229" },
-  { value: "GN", label: "🇬🇳 Guinée",                dialCode: "+224" },
-  { value: "GQ", label: "🇬🇶 Guinée Équatoriale",    dialCode: "+240" },
-  { value: "TD", label: "🇹🇩 Tchad",                 dialCode: "+235" },
-  { value: "AO", label: "🇦🇴 Angola",                dialCode: "+244" },
-  { value: "MG", label: "🇲🇬 Madagascar",            dialCode: "+261" },
-  { value: "OTHER", label: "🌍 Autre pays",           dialCode: ""    },
+  { value: "CG", label: "🇨🇬 Congo (Brazzaville)", dialCode: "+242", minDigits: 9, maxDigits: 9, placeholder: "+242 06 123 45 67" },
+  { value: "CD", label: "🇨🇩 RDC (Kinshasa)",       dialCode: "+243", minDigits: 9, maxDigits: 9, placeholder: "+243 81 234 56 78" },
+  { value: "CM", label: "🇨🇲 Cameroun",              dialCode: "+237", minDigits: 9, maxDigits: 9, placeholder: "+237 6 71 23 45 67" },
+  { value: "GA", label: "🇬🇦 Gabon",                 dialCode: "+241", minDigits: 7, maxDigits: 8, placeholder: "+241 77 12 34 56" },
+  { value: "CF", label: "🇨🇫 Centrafrique",          dialCode: "+236", minDigits: 8, maxDigits: 8, placeholder: "+236 75 12 34 56" },
+  { value: "CI", label: "🇨🇮 Côte d'Ivoire",         dialCode: "+225", minDigits: 10, maxDigits: 10, placeholder: "+225 07 12 34 56 78" },
+  { value: "SN", label: "🇸🇳 Sénégal",               dialCode: "+221", minDigits: 9, maxDigits: 9, placeholder: "+221 77 123 45 67" },
+  { value: "ML", label: "🇲🇱 Mali",                  dialCode: "+223", minDigits: 8, maxDigits: 8, placeholder: "+223 66 12 34 56" },
+  { value: "BF", label: "🇧🇫 Burkina Faso",          dialCode: "+226", minDigits: 8, maxDigits: 8, placeholder: "+226 70 12 34 56" },
+  { value: "TG", label: "🇹🇬 Togo",                  dialCode: "+228", minDigits: 8, maxDigits: 8, placeholder: "+228 90 12 34 56" },
+  { value: "BJ", label: "🇧🇯 Bénin",                 dialCode: "+229", minDigits: 8, maxDigits: 8, placeholder: "+229 97 12 34 56" },
+  { value: "GN", label: "🇬🇳 Guinée",                dialCode: "+224", minDigits: 9, maxDigits: 9, placeholder: "+224 620 12 34 56" },
+  { value: "GQ", label: "🇬🇶 Guinée Équatoriale",    dialCode: "+240", minDigits: 9, maxDigits: 9, placeholder: "+240 222 12 34 56" },
+  { value: "TD", label: "🇹🇩 Tchad",                 dialCode: "+235", minDigits: 8, maxDigits: 8, placeholder: "+235 66 12 34 56" },
+  { value: "AO", label: "🇦🇴 Angola",                dialCode: "+244", minDigits: 9, maxDigits: 9, placeholder: "+244 923 12 34 56" },
+  { value: "MG", label: "🇲🇬 Madagascar",            dialCode: "+261", minDigits: 9, maxDigits: 9, placeholder: "+261 34 12 345 67" },
+  { value: "OTHER", label: "🌍 Autre pays",           dialCode: "",     minDigits: 6, maxDigits: 15, placeholder: "+33 6 12 34 56 78" },
 ];
 
-/** Opérateurs télécom du Congo Brazzaville avec leur préfixe réseau. */
+/**
+ * Opérateurs télécom du Congo Brazzaville avec leurs préfixes réels :
+ * - MTN Congo : 06
+ * - Airtel Congo : 05
+ * - Airtel Pro / Spécial : 04
+ */
 export const congoOperators = [
-  { label: "Airtel Congo",  prefix: "+242 06" },
-  { label: "MTN Congo",     prefix: "+242 05" },
+  { label: "MTN Congo",     prefix: "+242 06" },
+  { label: "Airtel Congo",  prefix: "+242 05" },
   { label: "Airtel Pro",    prefix: "+242 04" },
-  { label: "Autre (+242)",  prefix: "+242"    },
 ];
 
 export const congoCities = [
@@ -52,8 +56,7 @@ export const congoCities = [
 ];
 
 /**
- * Capitalise la première lettre, laisse le reste intact.
- * Appliqué en temps réel sur les champs nom / ville / description.
+ * Capitalise la première lettre de chaque mot ou phrase.
  */
 export function capitalizeFirst(value) {
   if (!value || value.length === 0) return value;
@@ -61,21 +64,11 @@ export function capitalizeFirst(value) {
 }
 
 /**
- * Caractères autorisés dans les champs de texte (noms, villes, descriptions).
- *
- * ✅ Autorisé  : lettres latines + accents (À-ÿ, œ, Œ, æ, Æ), chiffres,
- *                espaces, tirets, apostrophes, virgules, points, parenthèses,
- *                esperluette (&), slash (/)
- *
- * ❌ Bloqué    : < > { } ; = $ ^ * ` ~ \ | @ % # ! ? " + [ ] (vecteurs
- *                d'injection HTML/SQL/XSS/template)
+ * Caractères autorisés dans les champs de texte.
+ * Bloque strictement tout caractère d'injection (< > { } ; = $ ^ * ` ~ \ | @ % # ! ? " + [ ]).
  */
-const SAFE_TEXT_RE = /^[a-zA-ZÀ-ÿœŒæÆ0-9\s\-',.()&/]+$/;
+export const SAFE_TEXT_RE = /^[a-zA-ZÀ-ÿœŒæÆ0-9\s\-',.()&/]+$/;
 
-/**
- * Validateur de base pour les champs texte libres.
- * Vérifie la longueur, l'absence de balises HTML et les caractères autorisés.
- */
 const safeTextField = (maximum, label) =>
   z
     .string()
@@ -101,10 +94,6 @@ export const shopSignupSchema = z
       error: "Choisissez le type d'activité de la boutique.",
     }),
 
-    /**
-     * Champ conditionnel : obligatoire uniquement si typeActivite === "autre".
-     * La règle cross-champ est vérifiée dans le .refine() global ci-dessous.
-     */
     autreActivite: z
       .string()
       .trim()
@@ -137,6 +126,106 @@ export const shopSignupSchema = z
     },
   );
 
+/**
+ * Nettoie et formate la saisie téléphonique en temps réel :
+ * - Supprime strictement toutes les lettres et caractères bizarres.
+ * - Autorise uniquement `+` en position 0, des chiffres et des espaces de lisibilité.
+ * - Bloque la saisie au-delà de la longueur maximale du pays sélectionné.
+ */
+export function formatPhoneInput(rawInput, countryCode = "CG") {
+  if (!rawInput) return "";
+
+  // 1. Filtrer les caractères interdits (pas de lettres, pas de symboles bizarres)
+  let val = rawInput.replace(/[^0-9+\s]/g, "");
+
+  // Le '+' n'est autorisé qu'au début
+  const hasLeadingPlus = val.startsWith("+");
+  val = val.replace(/\+/g, "");
+  if (hasLeadingPlus) {
+    val = "+" + val;
+  }
+
+  const country = africaCountries.find((c) => c.value === countryCode) || africaCountries[0];
+  const dial = country.dialCode; // ex: "+242"
+
+  // Si c'est le Congo
+  if (countryCode === "CG") {
+    // Si commence par +242 ou 242
+    const cleanDigits = val.replace(/\D/g, "");
+    if (cleanDigits.startsWith("242")) {
+      const nationalDigits = cleanDigits.slice(3, 3 + 9); // Max 9 chiffres après 242
+      let formatted = "+242";
+      if (nationalDigits.length > 0) formatted += " " + nationalDigits.slice(0, 2);
+      if (nationalDigits.length > 2) formatted += " " + nationalDigits.slice(2, 5);
+      if (nationalDigits.length > 5) formatted += " " + nationalDigits.slice(5, 7);
+      if (nationalDigits.length > 7) formatted += " " + nationalDigits.slice(7, 9);
+      return formatted;
+    } else {
+      // Saisie locale (ex: 06 694 19 99) : max 9 chiffres
+      const localDigits = cleanDigits.slice(0, 9);
+      let formatted = "";
+      if (localDigits.length > 0) formatted += localDigits.slice(0, 2);
+      if (localDigits.length > 2) formatted += " " + localDigits.slice(2, 5);
+      if (localDigits.length > 5) formatted += " " + localDigits.slice(5, 7);
+      if (localDigits.length > 7) formatted += " " + localDigits.slice(7, 9);
+      return formatted;
+    }
+  }
+
+  // Autres pays avec indicatif
+  if (dial && val.startsWith(dial)) {
+    const rawDigits = val.slice(dial.length).replace(/\D/g, "");
+    const maxDigits = country.maxDigits || 10;
+    const capped = rawDigits.slice(0, maxDigits);
+    return `${dial} ${capped}`.trim();
+  }
+
+  // Plafonner les chiffres bruts
+  const maxAllowedDigits = (country.maxDigits || 10) + 4;
+  const digitsOnly = val.replace(/\D/g, "");
+  if (digitsOnly.length > maxAllowedDigits) {
+    val = (hasLeadingPlus ? "+" : "") + digitsOnly.slice(0, maxAllowedDigits);
+  }
+
+  return val;
+}
+
+/**
+ * Valide la structure du numéro de téléphone en fonction du pays.
+ */
+export function isValidPhone(phone, countryCode = "CG") {
+  if (!phone || phone.trim() === "") return true; // facultatif
+
+  const trimmed = phone.trim();
+
+  // Ne doit contenir aucune lettre
+  if (/[a-zA-Z]/.test(trimmed)) return false;
+
+  const cleanDigits = trimmed.replace(/\D/g, "");
+
+  if (countryCode === "CG") {
+    // Congo : 9 chiffres locaux (ex: 066941999) ou 12 chiffres avec 242 (242 066941999)
+    if (cleanDigits.startsWith("242")) {
+      const national = cleanDigits.slice(3);
+      // Doit avoir 9 chiffres (commençant par 06, 05, 04, 02) ou 8 chiffres sans le zéro
+      return (
+        (national.length === 9 && /^(06|05|04|02)\d{7}$/.test(national)) ||
+        (national.length === 8 && /^(6|5|4|2)\d{7}$/.test(national))
+      );
+    }
+    // Saisie locale sans indicatif
+    return (
+      (cleanDigits.length === 9 && /^(06|05|04|02)\d{7}$/.test(cleanDigits)) ||
+      (cleanDigits.length === 8 && /^(6|5|4|2)\d{7}$/.test(cleanDigits))
+    );
+  }
+
+  const country = africaCountries.find((c) => c.value === countryCode);
+  const min = country?.minDigits || 6;
+  const max = (country?.maxDigits || 12) + 4; // marge pour indicatif
+  return cleanDigits.length >= min && cleanDigits.length <= max;
+}
+
 export const ownerSignupSchema = z.object({
   nomComplet: safeTextField(120, "Le nom complet"),
 
@@ -149,11 +238,16 @@ export const ownerSignupSchema = z.object({
   telephone: z
     .string()
     .trim()
-    .max(20, "Le numéro de téléphone ne peut pas dépasser 20 caractères.")
+    .max(25, "Le numéro de téléphone ne peut pas dépasser 25 caractères.")
     .refine(
-      (value) => value === "" || /^\+?[0-9\s().-]{8,20}$/.test(value),
-      "Saisissez un numéro valide, par exemple +242 06 123 45 67.",
-    ),
+      (v) => !v || !/[a-zA-Z]/.test(v),
+      "Le numéro de téléphone ne doit pas contenir de lettres.",
+    )
+    .refine(
+      (v) => isValidPhone(v, "CG"),
+      "Numéro Congo invalide (9 chiffres requis, ex. MTN 06 XXX XX XX ou Airtel 05/04 XXX XX XX).",
+    )
+    .optional(),
 
   motDePasse: z
     .string()

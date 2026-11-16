@@ -42,28 +42,60 @@ module.exports = asyncHandler(async (req, res) => {
   if (statutStock === "rupture") {
     criteres.stockActuel = { $lte: 0 };
   } else if (statutStock === "stock_bas") {
-    criteres.$expr = mongoose.trusted({
-      $and: [
-        { $gt: ["$stockActuel", 0] },              // pas en rupture
-        { $lte: ["$stockActuel", "$seuilAlerte"] }, // sous le seuil
-        { $gt: ["$seuilAlerte", 0] },              // seuil defini
-      ],
-    });
+    // $expr avec refs de champs : on utilise aggregate() pour eviter le
+    // CastError Mongoose qui essaie de caster "$seuilAlerte" en Number.
+    // On stocke l'info dans criteres pour basculer vers aggregate() ci-dessous.
+    criteres._useAggregateStockBas = true;
   } else if (statutStock === "en_stock") {
-    criteres.$expr = mongoose.trusted({ $gt: ["$stockActuel", "$seuilAlerte"] });
+    criteres._useAggregateEnStock = true;
   }
 
-  const filtre = tenantScope(req, criteres);
+  // Extraire les flags d'aggregation avant de construire le filtre Mongoose
+  const useAggregateStockBas = criteres._useAggregateStockBas;
+  const useAggregateEnStock = criteres._useAggregateEnStock;
+  delete criteres._useAggregateStockBas;
+  delete criteres._useAggregateEnStock;
 
-  const [produits, total] = await Promise.all([
-    ProductModel.find(filtre)
-      .sort(sort || "nom")
-      .skip((page - 1) * limit)
-      .limit(limit)
-      // `virtuals: true` : inclut marge, margePourcent et statutStock
-      .lean({ virtuals: true }),
-    ProductModel.countDocuments(filtre),
-  ]);
+  const filtreBase = tenantScope(req, criteres);
+
+  let produits, total;
+
+  if (useAggregateStockBas || useAggregateEnStock) {
+    // $expr avec refs de deux champs du meme document : aggregation obligatoire
+    // pour eviter le CastError Mongoose (impossible de caster "$seuilAlerte" en Number).
+    const exprCond = useAggregateStockBas
+      ? { $and: [{ $gt: ["$stockActuel", 0] }, { $lte: ["$stockActuel", "$seuilAlerte"] }, { $gt: ["$seuilAlerte", 0] }] }
+      : { $gt: ["$stockActuel", "$seuilAlerte"] };
+
+    const sortField = sort ? sort.startsWith("-") ? sort.slice(1) : sort : "nom";
+    const sortDir = sort && sort.startsWith("-") ? -1 : 1;
+
+    const pipeline = [
+      { $match: { ...filtreBase, $expr: exprCond } },
+      { $sort: { [sortField]: sortDir } },
+    ];
+
+    const [resultat, countResultat] = await Promise.all([
+      ProductModel.aggregate([
+        ...pipeline,
+        { $skip: (page - 1) * limit },
+        { $limit: limit },
+      ]),
+      ProductModel.aggregate([...pipeline, { $count: "total" }]),
+    ]);
+
+    produits = resultat;
+    total = countResultat[0]?.total || 0;
+  } else {
+    [produits, total] = await Promise.all([
+      ProductModel.find(filtreBase)
+        .sort(sort || "nom")
+        .skip((page - 1) * limit)
+        .limit(limit)
+        .lean({ virtuals: true }),
+      ProductModel.countDocuments(filtreBase),
+    ]);
+  }
 
   return success(res, produits, 200, paginationMeta(page, limit, total));
 });

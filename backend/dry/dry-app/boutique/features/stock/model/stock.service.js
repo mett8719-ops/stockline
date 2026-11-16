@@ -215,18 +215,29 @@ async function annulerSortiesVente(req, lignes, { referenceId, referenceLibelle,
   }
 }
 
-/** Produits sous leur seuil d'alerte (bandeau du module Stock). */
+/** Produits sous leur seuil d'alerte (bandeau du module Stock).
+ *
+ * On utilise aggregate() plutot que find() car $expr avec des references
+ * de champs ("$stockActuel", "$seuilAlerte") provoque un CastError Mongoose
+ * quand sanitizeFilter est actif globalement : Mongoose tente de caster la
+ * string "$seuilAlerte" en Number. L'aggregation pipeline ne souffre pas de
+ * ce probleme car elle ne passe pas par le casting de filtre find().
+ */
 async function produitsEnAlerte(shopId, limite = 20) {
-  return ProductModel.find({
-    shopId,
-    actif: true,
-    seuilAlerte: { $gt: 0 },
-    $expr: mongoose.trusted({ $lte: ["$stockActuel", "$seuilAlerte"] }),
-  })
-    .sort({ stockActuel: 1 })
-    .limit(limite)
-    .select("nom stockActuel seuilAlerte unite categorieNom")
-    .lean();
+  return ProductModel.aggregate([
+    {
+      $match: {
+        shopId: typeof shopId === "string" ? mongoose.Types.ObjectId.isValid(shopId)
+          ? new mongoose.Types.ObjectId(shopId) : shopId : shopId,
+        actif: true,
+        seuilAlerte: { $gt: 0 },
+        $expr: { $lte: ["$stockActuel", "$seuilAlerte"] },
+      },
+    },
+    { $sort: { stockActuel: 1 } },
+    { $limit: limite },
+    { $project: { nom: 1, stockActuel: 1, seuilAlerte: 1, unite: 1, categorieNom: 1 } },
+  ]);
 }
 
 /** Produits proches de la peremption (alimentaire, pharmacie). */

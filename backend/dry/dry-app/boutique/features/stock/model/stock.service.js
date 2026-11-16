@@ -19,6 +19,7 @@ const { notifyShop } = require("../../../../../core/services/notification.servic
 const ProductModel = require("../../product/model/product.model");
 const StockMovementModel = require("./stock-movement.model");
 const colors = require("colors");
+const mongoose = require("mongoose");
 
 /**
  * Enregistre un mouvement de stock et met a jour le produit.
@@ -220,9 +221,8 @@ async function produitsEnAlerte(shopId, limite = 20) {
     shopId,
     actif: true,
     seuilAlerte: { $gt: 0 },
-    $expr: { $lte: ["$stockActuel", "$seuilAlerte"] },
+    $expr: mongoose.trusted({ $lte: ["$stockActuel", "$seuilAlerte"] }),
   })
-    .setOptions({ sanitizeFilter: false })
     .sort({ stockActuel: 1 })
     .limit(limite)
     .select("nom stockActuel seuilAlerte unite categorieNom")

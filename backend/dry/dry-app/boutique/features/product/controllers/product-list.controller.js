@@ -13,6 +13,7 @@ const asyncHandler = require("../../../../../core/async-handler");
 const { success, paginationMeta } = require("../../../../../core/response");
 const { tenantScope } = require("../../../../../core/tenant-guard");
 const ProductModel = require("../model/product.model");
+const mongoose = require("mongoose");
 
 module.exports = asyncHandler(async (req, res) => {
   const { page, limit, q, categorieId, statutStock, actif, sort } =
@@ -41,28 +42,27 @@ module.exports = asyncHandler(async (req, res) => {
   if (statutStock === "rupture") {
     criteres.stockActuel = { $lte: 0 };
   } else if (statutStock === "stock_bas") {
-    criteres.$expr = {
+    criteres.$expr = mongoose.trusted({
       $and: [
         { $gt: ["$stockActuel", 0] },              // pas en rupture
         { $lte: ["$stockActuel", "$seuilAlerte"] }, // sous le seuil
         { $gt: ["$seuilAlerte", 0] },              // seuil defini
       ],
-    };
+    });
   } else if (statutStock === "en_stock") {
-    criteres.$expr = { $gt: ["$stockActuel", "$seuilAlerte"] };
+    criteres.$expr = mongoose.trusted({ $gt: ["$stockActuel", "$seuilAlerte"] });
   }
 
   const filtre = tenantScope(req, criteres);
 
   const [produits, total] = await Promise.all([
     ProductModel.find(filtre)
-      .setOptions({ sanitizeFilter: false })
       .sort(sort || "nom")
       .skip((page - 1) * limit)
       .limit(limit)
       // `virtuals: true` : inclut marge, margePourcent et statutStock
       .lean({ virtuals: true }),
-    ProductModel.countDocuments(filtre).setOptions({ sanitizeFilter: false }),
+    ProductModel.countDocuments(filtre),
   ]);
 
   return success(res, produits, 200, paginationMeta(page, limit, total));

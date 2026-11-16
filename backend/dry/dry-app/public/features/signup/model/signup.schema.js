@@ -21,6 +21,8 @@ const createSignupRequestSchema = z
       typeActivite: z
         .enum(BUSINESS_TYPES)
         .openapi({ example: "supermarche" }),
+      autreActivite: safeText(100).optional().openapi({ example: "Boulangerie artisanale" }),
+      pays: safeText(50).optional().default("CG").openapi({ example: "CG" }),
       adresse: safeText(250).optional(),
       ville: safeText(80).openapi({ example: "Brazzaville" }),
     }),

@@ -18,6 +18,8 @@ const signupRequestSchema = new mongoose.Schema(
     boutique: {
       nom: { type: String, required: true, trim: true, maxlength: 120 },
       typeActivite: { type: String, enum: BUSINESS_TYPES, required: true },
+      autreActivite: { type: String, trim: true, maxlength: 100 },
+      pays: { type: String, trim: true, maxlength: 50, default: "CG" },
       adresse: { type: String, trim: true, maxlength: 250 },
       ville: { type: String, required: true, trim: true, maxlength: 80 },
     },

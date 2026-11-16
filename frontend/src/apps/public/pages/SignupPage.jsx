@@ -1,11 +1,14 @@
 import { useState } from "react";
-import { ArrowLeft, ArrowRight, Eye, EyeOff, Store } from "lucide-react";
+import { ArrowLeft, ArrowRight, Eye, EyeOff, Globe, PhoneCall, Sparkles, Store } from "lucide-react";
 import { Link } from "react-router-dom";
 import PasswordStrength from "../components/PasswordStrength.jsx";
 import SignupStepper from "../features/signup/components/SignupStepper.jsx";
 import {
+  africaCountries,
   businessTypes,
+  capitalizeFirst,
   congoCities,
+  congoOperators,
   getFieldErrors,
   ownerSignupSchema,
   shopSignupSchema,
@@ -56,27 +59,46 @@ export default function SignupPage() {
   const setBoutique = useSignupStore((state) => state.setBoutique);
   const setProprietaire = useSignupStore((state) => state.setProprietaire);
   const setStep = useSignupStore((state) => state.setStep);
-  const [shopValues, setShopValues] = useState(boutique);
+
+  const [shopValues, setShopValues] = useState({
+    pays: "CG",
+    autreActivite: "",
+    ...boutique,
+  });
   const [ownerValues, setOwnerValues] = useState(proprietaire);
   const [password, setPassword] = useState("");
   const [isPasswordVisible, setIsPasswordVisible] = useState(false);
   const [fieldErrors, setFieldErrors] = useState({});
   const [formError, setFormError] = useState("");
 
+  // Gestion de la saisie personnalisée si ville = "Autre ville"
+  const isCongo = (shopValues.pays || "CG") === "CG";
+  const [isCustomCity, setIsCustomCity] = useState(
+    () => isCongo && Boolean(shopValues.ville) && !congoCities.slice(0, -1).includes(shopValues.ville)
+  );
+
   function updateShopField(field, value) {
-    const updatedShopValues = { ...shopValues, [field]: value };
-    setShopValues(updatedShopValues);
-    setBoutique(updatedShopValues);
+    const updated = { ...shopValues, [field]: value };
+    setShopValues(updated);
+    setBoutique(updated);
     setFieldErrors((errors) => ({ ...errors, [field]: "" }));
     setFormError("");
   }
 
   function updateOwnerField(field, value) {
-    const updatedOwnerValues = { ...ownerValues, [field]: value };
-    setOwnerValues(updatedOwnerValues);
-    setProprietaire(updatedOwnerValues);
+    const updated = { ...ownerValues, [field]: value };
+    setOwnerValues(updated);
+    setProprietaire(updated);
     setFieldErrors((errors) => ({ ...errors, [field]: "" }));
     setFormError("");
+  }
+
+  function applyPhonePrefix(prefix) {
+    const currentNumber = ownerValues.telephone || "";
+    // Si le numéro commence déjà par un +, on retire l'ancien préfixe ou on remplace
+    const cleaned = currentNumber.replace(/^\+?[0-9\s]+(?=[\s]|$)/, "").trim();
+    const newPhone = cleaned ? `${prefix} ${cleaned}` : `${prefix} `;
+    updateOwnerField("telephone", newPhone);
   }
 
   function continueToOwner(event) {
@@ -116,6 +138,8 @@ export default function SignupPage() {
     setFormError("");
     setStep(3);
   }
+
+  const selectedCountry = africaCountries.find((c) => c.value === (shopValues.pays || "CG"));
 
   return (
     <main className="min-h-screen bg-slate-50 px-4 py-8 sm:px-6 sm:py-12">
@@ -182,6 +206,7 @@ export default function SignupPage() {
                     noValidate
                     onSubmit={continueToOwner}
                   >
+                    {/* Nom de la boutique avec majuscule automatique */}
                     <div>
                       <label
                         className="text-sm font-medium text-slate-800"
@@ -199,15 +224,54 @@ export default function SignupPage() {
                         id="shop-name"
                         maxLength={120}
                         onChange={(event) =>
-                          updateShopField("nom", event.target.value)
+                          updateShopField("nom", capitalizeFirst(event.target.value))
                         }
                         placeholder="Ex. Boutique Maman Grâce"
                         required
-                        value={shopValues.nom}
+                        value={shopValues.nom || ""}
                       />
                       <FieldError id="shop-name-error" message={fieldErrors.nom} />
                     </div>
 
+                    {/* Choix du pays d'activité */}
+                    <div>
+                      <label
+                        className="flex items-center gap-1.5 text-sm font-medium text-slate-800"
+                        htmlFor="shop-country"
+                      >
+                        <Globe aria-hidden="true" className="text-slate-500" size={15} />
+                        Pays d’implantation
+                      </label>
+                      <select
+                        aria-describedby={fieldErrors.pays ? "shop-country-error" : undefined}
+                        aria-invalid={Boolean(fieldErrors.pays)}
+                        className={`${inputClassName} ${
+                          fieldErrors.pays ? "border-red-500 focus:border-red-500 focus:ring-red-100" : ""
+                        }`}
+                        id="shop-country"
+                        onChange={(event) => {
+                          const newPays = event.target.value;
+                          updateShopField("pays", newPays);
+                          if (newPays !== "CG") {
+                            setIsCustomCity(true);
+                            updateShopField("ville", "");
+                          } else {
+                            setIsCustomCity(false);
+                            updateShopField("ville", "Brazzaville");
+                          }
+                        }}
+                        value={shopValues.pays || "CG"}
+                      >
+                        {africaCountries.map(({ value, label }) => (
+                          <option key={value} value={value}>
+                            {label}
+                          </option>
+                        ))}
+                      </select>
+                      <FieldError id="shop-country-error" message={fieldErrors.pays} />
+                    </div>
+
+                    {/* Type d'activité */}
                     <div>
                       <label
                         className="text-sm font-medium text-slate-800"
@@ -226,11 +290,14 @@ export default function SignupPage() {
                             : ""
                         }`}
                         id="shop-type"
-                        onChange={(event) =>
-                          updateShopField("typeActivite", event.target.value)
-                        }
+                        onChange={(event) => {
+                          updateShopField("typeActivite", event.target.value);
+                          if (event.target.value !== "autre") {
+                            updateShopField("autreActivite", "");
+                          }
+                        }}
                         required
-                        value={shopValues.typeActivite}
+                        value={shopValues.typeActivite || ""}
                       >
                         <option disabled value="">
                           Sélectionnez votre activité
@@ -247,6 +314,37 @@ export default function SignupPage() {
                       />
                     </div>
 
+                    {/* Champ dynamique si Type d'activité = "autre" */}
+                    {shopValues.typeActivite === "autre" && (
+                      <div className="rounded-lg border border-brand-200 bg-brand-50/50 p-3.5 transition-all">
+                        <label
+                          className="flex items-center gap-1.5 text-sm font-medium text-brand-900"
+                          htmlFor="shop-other-type"
+                        >
+                          <Sparkles aria-hidden="true" className="text-brand-600" size={15} />
+                          Précisez votre activité
+                        </label>
+                        <p className="mt-0.5 text-xs text-brand-700">
+                          Décrivez la spécialité de votre commerce (ex. Salon de coiffure, Boulangerie, Atelier de couture...).
+                        </p>
+                        <input
+                          aria-describedby={fieldErrors.autreActivite ? "shop-other-type-error" : undefined}
+                          aria-invalid={Boolean(fieldErrors.autreActivite)}
+                          className={`${inputClassName} mt-2 bg-white`}
+                          id="shop-other-type"
+                          maxLength={100}
+                          onChange={(event) =>
+                            updateShopField("autreActivite", capitalizeFirst(event.target.value))
+                          }
+                          placeholder="Ex. Salon de coiffure & esthétique"
+                          required
+                          value={shopValues.autreActivite || ""}
+                        />
+                        <FieldError id="shop-other-type-error" message={fieldErrors.autreActivite} />
+                      </div>
+                    )}
+
+                    {/* Ville (avec gestion spécifique Congo vs autre pays) */}
                     <div>
                       <label
                         className="text-sm font-medium text-slate-800"
@@ -254,28 +352,66 @@ export default function SignupPage() {
                       >
                         Ville
                       </label>
-                      <select
-                        aria-describedby={fieldErrors.ville ? "shop-city-error" : undefined}
-                        aria-invalid={Boolean(fieldErrors.ville)}
-                        className={`${inputClassName} ${
-                          fieldErrors.ville ? "border-red-500 focus:border-red-500 focus:ring-red-100" : ""
-                        }`}
-                        id="shop-city"
-                        onChange={(event) =>
-                          updateShopField("ville", event.target.value)
-                        }
-                        required
-                        value={shopValues.ville}
-                      >
-                        <option disabled value="">
-                          Sélectionnez une ville du Congo
-                        </option>
-                        {congoCities.map((city) => (
-                          <option key={city} value={city}>
-                            {city}
+                      {isCongo && !isCustomCity ? (
+                        <select
+                          aria-describedby={fieldErrors.ville ? "shop-city-error" : undefined}
+                          aria-invalid={Boolean(fieldErrors.ville)}
+                          className={`${inputClassName} ${
+                            fieldErrors.ville ? "border-red-500 focus:border-red-500 focus:ring-red-100" : ""
+                          }`}
+                          id="shop-city"
+                          onChange={(event) => {
+                            const val = event.target.value;
+                            if (val === "Autre ville") {
+                              setIsCustomCity(true);
+                              updateShopField("ville", "");
+                            } else {
+                              updateShopField("ville", val);
+                            }
+                          }}
+                          required
+                          value={shopValues.ville || ""}
+                        >
+                          <option disabled value="">
+                            Sélectionnez une ville du Congo
                           </option>
-                        ))}
-                      </select>
+                          {congoCities.map((city) => (
+                            <option key={city} value={city}>
+                              {city}
+                            </option>
+                          ))}
+                        </select>
+                      ) : (
+                        <div>
+                          <input
+                            aria-describedby={fieldErrors.ville ? "shop-city-error" : undefined}
+                            aria-invalid={Boolean(fieldErrors.ville)}
+                            className={`${inputClassName} ${
+                              fieldErrors.ville ? "border-red-500 focus:border-red-500 focus:ring-red-100" : ""
+                            }`}
+                            id="shop-city"
+                            maxLength={80}
+                            onChange={(event) =>
+                              updateShopField("ville", capitalizeFirst(event.target.value))
+                            }
+                            placeholder={isCongo ? "Ex. Kinkala, Gamboma, Djambala..." : "Ex. Kinshasa, Douala, Libreville..."}
+                            required
+                            value={shopValues.ville || ""}
+                          />
+                          {isCongo && (
+                            <button
+                              className="mt-1.5 text-xs text-brand-700 underline hover:text-brand-800"
+                              onClick={() => {
+                                setIsCustomCity(false);
+                                updateShopField("ville", "Brazzaville");
+                              }}
+                              type="button"
+                            >
+                              ← Choisir dans la liste des principales villes
+                            </button>
+                          )}
+                        </div>
+                      )}
                       <FieldError id="shop-city-error" message={fieldErrors.ville} />
                     </div>
 
@@ -317,6 +453,7 @@ export default function SignupPage() {
                     noValidate
                     onSubmit={continueToPlan}
                   >
+                    {/* Nom complet avec 1ère lettre majuscule */}
                     <div>
                       <label
                         className="text-sm font-medium text-slate-800"
@@ -338,11 +475,11 @@ export default function SignupPage() {
                         id="owner-name"
                         maxLength={120}
                         onChange={(event) =>
-                          updateOwnerField("nomComplet", event.target.value)
+                          updateOwnerField("nomComplet", capitalizeFirst(event.target.value))
                         }
                         placeholder="Ex. Grâce Mbuyi"
                         required
-                        value={ownerValues.nomComplet}
+                        value={ownerValues.nomComplet || ""}
                       />
                       <FieldError
                         id="owner-name-error"
@@ -373,19 +510,25 @@ export default function SignupPage() {
                         placeholder="vous@exemple.cg"
                         required
                         type="email"
-                        value={ownerValues.email}
+                        value={ownerValues.email || ""}
                       />
                       <FieldError id="owner-email-error" message={fieldErrors.email} />
                     </div>
 
+                    {/* Téléphone avec initiatives opérateurs et indicatifs */}
                     <div>
-                      <label
-                        className="text-sm font-medium text-slate-800"
-                        htmlFor="owner-phone"
-                      >
-                        Téléphone{" "}
-                        <span className="font-normal text-slate-500">(facultatif)</span>
-                      </label>
+                      <div className="flex items-center justify-between">
+                        <label
+                          className="text-sm font-medium text-slate-800"
+                          htmlFor="owner-phone"
+                        >
+                          Téléphone{" "}
+                          <span className="font-normal text-slate-500">(facultatif)</span>
+                        </label>
+                        <span className="text-[11px] text-slate-400">
+                          {selectedCountry?.label || "Afrique"}
+                        </span>
+                      </div>
                       <input
                         aria-describedby={
                           fieldErrors.telephone ? "owner-phone-error" : undefined
@@ -403,14 +546,42 @@ export default function SignupPage() {
                         onChange={(event) =>
                           updateOwnerField("telephone", event.target.value)
                         }
-                        placeholder="+242 06 123 45 67"
+                        placeholder={selectedCountry?.dialCode ? `${selectedCountry.dialCode} 06 123 45 67` : "+242 06 123 45 67"}
                         type="tel"
-                        value={ownerValues.telephone}
+                        value={ownerValues.telephone || ""}
                       />
                       <FieldError
                         id="owner-phone-error"
                         message={fieldErrors.telephone}
                       />
+
+                      {/* Raccourcis opérateurs locaux pour fluidifier la saisie */}
+                      <div className="mt-2 flex flex-wrap items-center gap-1.5">
+                        <span className="flex items-center gap-1 text-[11px] text-slate-500">
+                          <PhoneCall aria-hidden="true" size={12} />
+                          Raccourcis :
+                        </span>
+                        {isCongo ? (
+                          congoOperators.map(({ label, prefix }) => (
+                            <button
+                              className="rounded-md border border-slate-200 bg-slate-50 px-2 py-0.5 text-[11px] font-medium text-slate-700 transition hover:bg-brand-50 hover:border-brand-300 hover:text-brand-800"
+                              key={label}
+                              onClick={() => applyPhonePrefix(prefix)}
+                              type="button"
+                            >
+                              {label} ({prefix})
+                            </button>
+                          ))
+                        ) : selectedCountry?.dialCode ? (
+                          <button
+                            className="rounded-md border border-slate-200 bg-slate-50 px-2 py-0.5 text-[11px] font-medium text-slate-700 transition hover:bg-brand-50 hover:border-brand-300 hover:text-brand-800"
+                            onClick={() => applyPhonePrefix(selectedCountry.dialCode)}
+                            type="button"
+                          >
+                            Indicatif {selectedCountry.label} ({selectedCountry.dialCode})
+                          </button>
+                        ) : null}
+                      </div>
                     </div>
 
                     <div>
@@ -432,7 +603,7 @@ export default function SignupPage() {
                           className={`${inputClassName} pr-12 ${
                             fieldErrors.motDePasse
                               ? "border-red-500 focus:border-red-500 focus:ring-red-100"
-                              : ""
+                            : ""
                           }`}
                           id="owner-password"
                           maxLength={128}

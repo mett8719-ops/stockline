@@ -238,14 +238,10 @@ export const ownerSignupSchema = z.object({
   telephone: z
     .string()
     .trim()
-    .max(25, "Le numéro de téléphone ne peut pas dépasser 25 caractères.")
+    .max(20, "Le numéro de téléphone ne peut pas dépasser 20 caractères.")
     .refine(
       (v) => !v || !/[a-zA-Z]/.test(v),
       "Le numéro de téléphone ne doit pas contenir de lettres.",
-    )
-    .refine(
-      (v) => isValidPhone(v, "CG"),
-      "Numéro Congo invalide (9 chiffres requis, ex. MTN 06 XXX XX XX ou Airtel 05/04 XXX XX XX).",
     )
     .optional(),
 
@@ -257,6 +253,68 @@ export const ownerSignupSchema = z.object({
       isStrongPassword,
       "Respectez les critères de sécurité affichés sous le champ.",
     ),
+  pays: z.enum(countryValues, {
+    error: "Sélectionnez votre pays.",
+  }),
+}).superRefine((owner, context) => {
+  if (owner.telephone && !isValidPhone(owner.telephone, owner.pays)) {
+    const countryLabel =
+      africaCountries.find(({ value }) => value === owner.pays)?.label ??
+      "de téléphone";
+
+    context.addIssue({
+      code: "custom",
+      message: `Numéro ${countryLabel} invalide.`,
+      path: ["telephone"],
+    });
+  }
+});
+
+export const signupRequestSchema = z.object({
+  boutique: shopSignupSchema,
+  proprietaire: z.object({
+    nomComplet: safeTextField(120, "Le nom complet"),
+    email: z
+      .string()
+      .trim()
+      .toLowerCase()
+      .email("Saisissez une adresse email valide."),
+    telephone: z
+      .string()
+      .max(20, "Le numéro de téléphone ne peut pas dépasser 20 caractères.")
+      .optional(),
+    motDePasse: z
+      .string()
+      .min(8)
+      .max(128)
+      .refine(
+        isStrongPassword,
+        "Le mot de passe ne respecte pas les critères requis.",
+      ),
+  }),
+  abonnement: z.object({
+    planId: z.string().regex(/^[0-9a-f]{24}$/i, "Choisissez un forfait valide."),
+    cycle: z.enum(["monthly", "yearly"]),
+    jourPrelevement: z.number().int().min(1).max(28),
+  }),
+  cguAcceptees: z.literal(true, {
+    error: "Vous devez accepter les conditions générales d’utilisation.",
+  }),
+}).superRefine((request, context) => {
+  const { telephone } = request.proprietaire;
+  const countryCode = request.boutique.pays;
+
+  if (telephone && !isValidPhone(telephone, countryCode)) {
+    const countryLabel =
+      africaCountries.find(({ value }) => value === countryCode)?.label ??
+      "de téléphone";
+
+    context.addIssue({
+      code: "custom",
+      message: `Numéro ${countryLabel} invalide.`,
+      path: ["proprietaire", "telephone"],
+    });
+  }
 });
 
 export function getFieldErrors(error) {

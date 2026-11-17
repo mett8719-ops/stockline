@@ -15,9 +15,14 @@ export default function EmployeeActionDialog({
 }) {
   const dialogRef = useRef(null);
   const updateMutation = useUpdateEmployee();
-  const initialRole = roleOptions.some((role) => role.value === employee.role)
-    ? employee.role
-    : roleOptions[0]?.value || "";
+  const initialRole =
+    roleOptions.find((option) =>
+      option.customRoleId
+        ? employee.role === "custom" && option.label === employee.roleLibelle
+        : option.value === employee.role,
+    )?.value ||
+    roleOptions[0]?.value ||
+    "";
   const [selectedRole, setSelectedRole] = useState(initialRole);
   const [name, setName] = useState(employee.nom || "");
   const [telephone, setTelephone] = useState(employee.telephone || "");
@@ -44,8 +49,13 @@ export default function EmployeeActionDialog({
   async function handleSubmit(event) {
     event.preventDefault();
     setErrorMessage("");
+    const selectedRoleOption = roleOptions.find(
+      (option) => option.value === selectedRole,
+    );
     const changes = isRoleMode
-      ? { role: selectedRole, customRoleId: null }
+      ? selectedRoleOption?.customRoleId
+        ? { customRoleId: selectedRoleOption.customRoleId }
+        : { role: selectedRole, customRoleId: null }
       : isEditMode
         ? { nom: name.trim() }
         : { gele: willFreeze };

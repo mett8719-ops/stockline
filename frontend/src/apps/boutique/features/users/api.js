@@ -19,3 +19,13 @@ export async function updateEmployee({ employeeId, changes }) {
   const { data } = await apiClient.patch(`/users/${employeeId}`, changes);
   return data.data;
 }
+
+export async function createCustomRole(role) {
+  const { data } = await apiClient.post("/roles", role);
+  return data.data;
+}
+
+export async function updateCustomRole({ roleId, role }) {
+  const { data } = await apiClient.patch(`/roles/${roleId}`, role);
+  return data.data;
+}

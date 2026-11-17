@@ -3,6 +3,8 @@ import {
   fetchEmployeeRoles,
   fetchEmployees,
   inviteEmployee,
+  createCustomRole,
+  updateCustomRole,
   updateEmployee,
 } from "./api.js";
 
@@ -48,5 +50,22 @@ export function useUpdateEmployee() {
   return useMutation({
     mutationFn: updateEmployee,
     onSuccess: refreshEmployees,
+  });
+}
+
+export function useSaveCustomRole() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: ({ roleId, role }) =>
+      roleId
+        ? updateCustomRole({ roleId, role })
+        : createCustomRole(role),
+    onSuccess: async () => {
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: employeeKeys.roles }),
+        queryClient.invalidateQueries({ queryKey: employeeKeys.all }),
+      ]);
+    },
   });
 }

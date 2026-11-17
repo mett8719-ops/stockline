@@ -33,8 +33,16 @@ export default function InviteEmployeeDialog({
     event.preventDefault();
     setErrorMessage("");
 
-    const employee = { nom: nom.trim(), email: email.trim().toLowerCase(), role };
+    const selectedRole = roleOptions.find((option) => option.value === role);
+    const employee = {
+      nom: nom.trim(),
+      email: email.trim().toLowerCase(),
+      role: selectedRole?.customRoleId ? "caissier" : role,
+    };
     if (telephone.trim()) employee.telephone = telephone.trim();
+    if (selectedRole?.customRoleId) {
+      employee.customRoleId = selectedRole.customRoleId;
+    }
 
     try {
       const result = await inviteMutation.mutateAsync(employee);

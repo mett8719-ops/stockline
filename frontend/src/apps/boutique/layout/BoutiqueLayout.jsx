@@ -115,7 +115,16 @@ function BoutiqueSidebar({ shop, user, visibleNavigation, onNavigate }) {
       </nav>
 
       <div className="border-t border-white/10 p-4">
-        <div className="flex items-center gap-3">
+        <NavLink
+          aria-label="Ouvrir mon profil"
+          className={({ isActive }) =>
+            `flex items-center gap-3 rounded-lg p-2 transition-colors focus:outline-none focus:ring-2 focus:ring-brand-300 ${
+              isActive ? "bg-white/10" : "hover:bg-white/5"
+            }`
+          }
+          onClick={onNavigate}
+          to="/profile"
+        >
           <div
             aria-hidden="true"
             className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-brand-600 text-xs font-semibold text-white"
@@ -130,7 +139,7 @@ function BoutiqueSidebar({ shop, user, visibleNavigation, onNavigate }) {
               {user?.roleLibelle || user?.role || "Équipe"}
             </p>
           </div>
-        </div>
+        </NavLink>
       </div>
     </>
   );
@@ -222,13 +231,14 @@ export default function BoutiqueLayout({ children }) {
           <div className="flex shrink-0 items-center gap-2 sm:gap-4">
             <SyncBadge />
             <NotificationBell />
-            <div
-              aria-label={`Connecté en tant que ${user?.nom || "utilisateur"}`}
-              className="flex h-8 w-8 items-center justify-center rounded-full bg-brand-100 text-xs font-semibold text-brand-700 sm:h-9 sm:w-9"
+            <NavLink
+              aria-label="Ouvrir mon profil"
+              className="flex h-8 w-8 items-center justify-center rounded-full bg-brand-100 text-xs font-semibold text-brand-700 transition hover:ring-2 hover:ring-brand-300 focus:outline-none focus:ring-2 focus:ring-brand-300 sm:h-9 sm:w-9"
+              to="/profile"
               title={user?.nom || "Utilisateur"}
             >
               {getInitials(user?.nom)}
-            </div>
+            </NavLink>
             <button
               aria-label="Se déconnecter"
               className="rounded-lg p-2 text-slate-500 hover:bg-slate-100 hover:text-slate-800"

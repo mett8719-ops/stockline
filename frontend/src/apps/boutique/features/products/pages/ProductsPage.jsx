@@ -34,7 +34,7 @@ const numberFormat = new Intl.NumberFormat("fr-FR", {
 });
 
 function formatPrice(value) {
-  return `${numberFormat.format(Number(value) || 0)} CDF`;
+  return `${numberFormat.format(Number(value) || 0)} FCFA`;
 }
 
 function StockStatus({ status }) {

@@ -47,7 +47,7 @@ const paymentLabels = {
 };
 
 function formatCurrency(value) {
-  return `${currencyFormat.format(Number(value) || 0)} CDF`;
+  return `${currencyFormat.format(Number(value) || 0)} FCFA`;
 }
 
 function getLocalDateKey(date) {
@@ -193,7 +193,7 @@ function LoadingDashboard() {
 }
 
 export default function DashboardPage() {
-  const { user, shop } = useAuth();
+  const { user } = useAuth();
   const dashboardQuery = useDashboard();
   const data = dashboardQuery.data;
   const [now] = useState(() => new Date());
@@ -228,7 +228,6 @@ export default function DashboardPage() {
   const kpis = data.kpis;
   const alerts = Array.isArray(data.alertesStock) ? data.alertesStock : [];
   const sales = Array.isArray(data.dernieresVentes) ? data.dernieresVentes : [];
-  const todayLabel = longDateFormat.format(now);
 
   return (
     <section className="space-y-5">
@@ -237,9 +236,6 @@ export default function DashboardPage() {
           <h2 className="text-xl font-semibold text-slate-900">
             {greeting}, {user?.roleLibelle || "Directeur"} 👋
           </h2>
-          <p className="mt-1 text-sm capitalize text-slate-500">
-            {shop?.nom || "Ma boutique"} · {todayLabel}
-          </p>
         </div>
         <button
           className="inline-flex h-10 items-center justify-center gap-2 rounded-lg bg-blue-50 px-4 text-sm font-medium text-blue-700 transition hover:bg-blue-100 focus:outline-none focus:ring-2 focus:ring-blue-200 disabled:opacity-50"

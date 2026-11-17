@@ -6,6 +6,7 @@
     "dev": "nodemon server.js",
     "start": "node server.js",
     "seed": "node dry/seed/seed.js",
+    "setup:mongo-rs": "node dry/scripts/setup-replica-set.js",
     "lint": "eslint .",
     "test": "jest --runInBand"
   },

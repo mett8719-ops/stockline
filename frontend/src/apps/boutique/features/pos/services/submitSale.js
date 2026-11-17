@@ -119,7 +119,7 @@ export function getStockIssueNames(error) {
 }
 
 export async function submitSaleToApi(cartState = {}) {
-  const { default: apiClient } = await import("../../../../core/api/client.js");
+  const { default: apiClient } = await import("../../../../../core/api/client.js");
   const payload = buildSalePayload(cartState);
   const response = await apiClient.post("/sales", payload);
   const sale = response.data?.data?.vente ?? response.data?.vente ?? {};

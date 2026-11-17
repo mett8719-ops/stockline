@@ -1,6 +1,7 @@
 import { useState } from "react";
 import {
   Boxes,
+  BarChart3,
   ChevronDown,
   ClipboardList,
   FileText,
@@ -25,6 +26,7 @@ import SyncBadge from "@/core/offline/SyncBadge.jsx";
 
 const navigation = [
   { label: "Tableau de bord", path: "/dashboard", permission: "dashboard", icon: LayoutDashboard },
+  { label: "Rapports", path: "/reports", permission: "dashboard", icon: BarChart3 },
   { label: "Caisse", path: "/pos", permission: "pos", icon: ShoppingCart },
   { label: "Produits", path: "/products", permission: "products", icon: Package },
   { label: "Stock", path: "/stock", permission: "stock", icon: Boxes },

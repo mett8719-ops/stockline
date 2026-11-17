@@ -48,6 +48,7 @@ function getViewportHeight() {
 
 const ProductGrid = memo(function ProductGrid({ products }) {
   const containerRef = useRef(null);
+  const isVirtualized = products.length > VIRTUAL_PRODUCT_THRESHOLD;
   const [columns, setColumns] = useState(() =>
     getProductGridColumns(getViewportWidth()),
   );
@@ -69,6 +70,8 @@ const ProductGrid = memo(function ProductGrid({ products }) {
   );
 
   useEffect(() => {
+    if (!isVirtualized) return undefined;
+
     const updateLayout = () => {
       setColumns(getProductGridColumns(getViewportWidth()));
       if (containerRef.current) {
@@ -88,9 +91,9 @@ const ProductGrid = memo(function ProductGrid({ products }) {
       window.removeEventListener("resize", updateLayout);
       resizeObserver?.disconnect();
     };
-  }, []);
+  }, [isVirtualized]);
 
-  if (products.length <= VIRTUAL_PRODUCT_THRESHOLD) {
+  if (!isVirtualized) {
     return (
       <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
         {products.map((product) => (

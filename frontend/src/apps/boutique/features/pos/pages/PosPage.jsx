@@ -1,7 +1,8 @@
 import { History, Search, ShoppingCart, Trash2 } from "lucide-react";
-import { useMemo, useState } from "react";
+import { useDeferredValue, useMemo, useState } from "react";
 import { Link } from "react-router-dom";
 import { parseApiError } from "@/core/api/errors.js";
+import ProductGrid from "../components/ProductGrid.jsx";
 import { submitSaleToApi, getStockIssueNames } from "../services/submitSale.js";
 import { usePosCart } from "../store/cartStore.js";
 
@@ -44,32 +45,10 @@ function formatMoney(value) {
   return `${new Intl.NumberFormat("fr-FR", { maximumFractionDigits: 0 }).format(value)} CDF`;
 }
 
-function ProductCard({ product, onAdd }) {
-  const lowStock = product.stock <= 10;
-
-  return (
-    <button
-      type="button"
-      onClick={() => onAdd(product)}
-      className="flex min-h-[150px] flex-col justify-between rounded-xl border border-slate-200 bg-white p-3 text-left shadow-sm transition hover:border-blue-200 hover:shadow-md"
-    >
-      <div className="mb-4 flex h-10 w-10 items-center justify-center rounded-lg bg-slate-200 text-lg">
-        📦
-      </div>
-      <div>
-        <h3 className="text-base font-medium text-slate-800">{product.name}</h3>
-        <p className="mt-2 text-xl font-bold text-blue-600">{formatMoney(product.price)}</p>
-        <p className={`mt-1 text-xs ${lowStock ? "text-amber-600" : "text-slate-500"}`}>
-          Stock: {product.stock} {product.unit}
-        </p>
-      </div>
-    </button>
-  );
-}
-
 export default function PosPage() {
   const [activeCategory, setActiveCategory] = useState("Tous");
   const [query, setQuery] = useState("");
+  const deferredQuery = useDeferredValue(query);
   const [checkoutOpen, setCheckoutOpen] = useState(false);
   const [checkoutError, setCheckoutError] = useState("");
   const [cartOpen, setCartOpen] = useState(true);
@@ -77,7 +56,6 @@ export default function PosPage() {
     items,
     total,
     count,
-    addItem,
     removeItem,
     updateQuantity,
     selectedPayment,
@@ -95,7 +73,7 @@ export default function PosPage() {
   } = usePosCart();
 
   const filteredProducts = useMemo(() => {
-    const normalizedQuery = query.trim().toLowerCase();
+    const normalizedQuery = deferredQuery.trim().toLowerCase();
     return products.filter((product) => {
       const matchesCategory =
         activeCategory === "Tous" || product.category === activeCategory;
@@ -105,7 +83,7 @@ export default function PosPage() {
         product.category.toLowerCase().includes(normalizedQuery);
       return matchesCategory && matchesQuery;
     });
-  }, [activeCategory, query]);
+  }, [activeCategory, deferredQuery]);
 
   async function handleSubmitSale() {
     try {
@@ -211,11 +189,10 @@ export default function PosPage() {
             ))}
           </div>
 
-          <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
-            {filteredProducts.map((product) => (
-              <ProductCard key={product.id} onAdd={addItem} product={product} />
-            ))}
-          </div>
+          <ProductGrid
+            key={JSON.stringify([activeCategory, deferredQuery])}
+            products={filteredProducts}
+          />
         </section>
 
         <aside className={`rounded-2xl border border-slate-200 bg-slate-50 p-4 shadow-sm ${cartOpen ? "" : "xl:w-[90px]"}`}>

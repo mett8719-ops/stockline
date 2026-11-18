@@ -102,9 +102,9 @@ export default function GuidedTour({
         className="fixed inset-0 z-40 bg-slate-950/55"
         data-testid="guided-tour-backdrop"
       />
-      <section
+      <div
         aria-describedby="guided-tour-description"
-        aria-labelledby="guided-tour-title"
+        aria-labelledby="tour-title"
         aria-modal="true"
         className="fixed bottom-4 left-1/2 z-[60] w-[calc(100%-2rem)] max-w-md -translate-x-1/2 rounded-2xl border border-slate-200 bg-white p-5 shadow-2xl sm:bottom-8 sm:p-6"
         ref={dialogRef}
@@ -144,7 +144,7 @@ export default function GuidedTour({
             </p>
             <h2
               className="mt-2 text-lg font-bold text-slate-900"
-              id="guided-tour-title"
+              id="tour-title"
             >
               {activeStep.title}
             </h2>
@@ -242,7 +242,7 @@ export default function GuidedTour({
             )}
           </div>
         </div>
-      </section>
+      </div>
     </>
   );
 }

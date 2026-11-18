@@ -31,6 +31,7 @@ const { router: userRoute, roleRouter } =
 const reportRoute = require("../features/report/routes/report.route");
 const suggestionRoute = require("../features/suggestion/routes/suggestion.route");
 const subscriptionRoute = require("../features/subscription/routes/subscription.route");
+const shopSettingsRoute = require("../features/shop-settings/routes/shop-settings.route");
 
 const router = express.Router();
 
@@ -58,5 +59,7 @@ router.use("/users", userRoute);
 router.use("/roles", roleRouter);
 router.use("/suggestions", suggestionRoute);
 router.use("/subscription", subscriptionRoute);
+router.use("/settings", shopSettingsRoute);
+router.use("/shop", shopSettingsRoute);
 
 module.exports = router;

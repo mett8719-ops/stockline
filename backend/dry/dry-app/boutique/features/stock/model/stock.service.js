@@ -240,20 +240,32 @@ async function produitsEnAlerte(shopId, limite = 20) {
   ]);
 }
 
-/** Produits proches de la peremption (alimentaire, pharmacie). */
+/** Produits proches de la peremption (alimentaire, pharmacie).
+ *
+ * Utilise aggregate() au lieu de find() pour contourner les faux positifs
+ * CastError provoques par sanitizeFilter sur les champs Number/Date.
+ */
 async function produitsProchePeremption(shopId, joursAvant = 30) {
   const limite = new Date();
   limite.setDate(limite.getDate() + joursAvant);
 
-  return ProductModel.find({
-    shopId,
-    actif: true,
-    datePeremption: { $ne: null, $lte: limite },
-    stockActuel: { $gt: 0 },
-  })
-    .sort({ datePeremption: 1 })
-    .select("nom datePeremption stockActuel unite")
-    .lean();
+  const cleanShopId =
+    typeof shopId === "string" && mongoose.Types.ObjectId.isValid(shopId)
+      ? new mongoose.Types.ObjectId(shopId)
+      : shopId;
+
+  return ProductModel.aggregate([
+    {
+      $match: {
+        shopId: cleanShopId,
+        actif: true,
+        datePeremption: { $ne: null, $lte: limite },
+        stockActuel: { $gt: 0 },
+      },
+    },
+    { $sort: { datePeremption: 1 } },
+    { $project: { nom: 1, datePeremption: 1, stockActuel: 1, unite: 1 } },
+  ]);
 }
 
 module.exports = {

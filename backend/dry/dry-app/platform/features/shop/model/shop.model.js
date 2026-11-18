@@ -22,6 +22,8 @@ const shopSchema = new mongoose.Schema(
     logoUrl: { type: String },
     rccm: { type: String, trim: true },   // registre du commerce / numero fiscal
     devise: { type: String, default: () => process.env.DEFAULT_CURRENCY || "XAF" },
+    delaiPaiementClient: { type: Number, default: 30, min: 0, max: 365 },
+    delaiPaiementFournisseur: { type: Number, default: 15, min: 0, max: 365 },
     fuseauHoraire: {
       type: String,
       default: () => process.env.DEFAULT_TIMEZONE || "Africa/Brazzaville",

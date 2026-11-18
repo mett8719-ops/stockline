@@ -369,16 +369,17 @@ const stockReport = asyncHandler(async (req, res) => {
   // Produits en stock mais jamais vendus sur la periode
   const vendus = produitsVendus.map((r) => r._id);
 
-  const dormants = await ProductModel.find(
-    tenantScope(req, {
-      actif: true,
-      stockActuel: { $gt: 0 },
-      _id: { $nin: vendus },
-    })
-  )
-    .select("nom stockActuel prixAchat unite")
-    .limit(30)
-    .lean();
+  const dormants = await ProductModel.aggregate([
+    {
+      $match: tenantScope(req, {
+        actif: true,
+        stockActuel: { $gt: 0 },
+        _id: { $nin: vendus },
+      }),
+    },
+    { $limit: 30 },
+    { $project: { nom: 1, stockActuel: 1, prixAchat: 1, unite: 1 } },
+  ]);
 
   const v = valorisation[0] || {
     valeurAchat: 0, valeurVente: 0, references: 0, unitesTotales: 0,

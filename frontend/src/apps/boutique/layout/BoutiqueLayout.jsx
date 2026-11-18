@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useCallback, useState } from "react";
 import {
   Boxes,
   ChevronDown,
@@ -22,6 +22,7 @@ import { NavLink, Outlet, useLocation, useNavigate } from "react-router-dom";
 import { useAuth } from "@/core/hooks/useAuth.js";
 import NotificationBell from "@/apps/shared/features/notifications/NotificationBell.jsx";
 import SyncBadge from "@/core/offline/SyncBadge.jsx";
+import GuidedTour from "../features/onboarding/components/GuidedTour.jsx";
 
 const navigation = [
   { label: "Tableau de bord", path: "/dashboard", permission: "dashboard", icon: LayoutDashboard },
@@ -96,6 +97,7 @@ function BoutiqueSidebar({ shop, user, visibleNavigation, onNavigate }) {
             <li key={path}>
               <NavLink
                 end={path === "/dashboard"}
+                data-onboarding-target={path}
                 onClick={onNavigate}
                 to={path}
                 className={({ isActive }) =>
@@ -141,6 +143,12 @@ export default function BoutiqueLayout({ children }) {
   const { permissions, user, shop, logout } = useAuth();
   const location = useLocation();
   const navigate = useNavigate();
+  const showGuidedTour = Boolean(user && !user.aTermineVisiteGuidee);
+  const openNavigationForTour = useCallback(() => setIsMenuOpen(true), []);
+  const closeNavigationAfterTour = useCallback(
+    () => setIsMenuOpen(false),
+    [],
+  );
   const [dateLabel] = useState(() => {
     const formattedDate = frenchDate.format(new Date());
     return formattedDate[0].toUpperCase() + formattedDate.slice(1);
@@ -244,6 +252,13 @@ export default function BoutiqueLayout({ children }) {
           {children || <Outlet />}
         </main>
       </div>
+      {showGuidedTour && (
+        <GuidedTour
+          onCloseNavigation={closeNavigationAfterTour}
+          onOpenNavigation={openNavigationForTour}
+          visibleNavigation={visibleNavigation}
+        />
+      )}
     </div>
   );
 }

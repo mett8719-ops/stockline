@@ -1,8 +1,23 @@
-import { useState } from "react";
-import { ArrowLeft, ArrowRight, Eye, EyeOff, Globe, PhoneCall, Sparkles, Store } from "lucide-react";
-import { Link } from "react-router-dom";
+import { useEffect, useRef, useState } from "react";
+import {
+  ArrowLeft,
+  ArrowRight,
+  CheckCircle2,
+  Eye,
+  EyeOff,
+  Globe,
+  PhoneCall,
+  Sparkles,
+  Store,
+} from "lucide-react";
+import { Link, useSearchParams } from "react-router-dom";
+import { parseApiError } from "@/core/api/errors.js";
 import PasswordStrength from "../components/PasswordStrength.jsx";
 import { isStrongPassword } from "../components/password-rules.js";
+import { usePublicPlans } from "../features/landing/hooks.js";
+import { createSignupRequest } from "../features/signup/api.js";
+import SignupPlanStep from "../features/signup/components/SignupPlanStep.jsx";
+import SignupReviewStep from "../features/signup/components/SignupReviewStep.jsx";
 import SignupStepper from "../features/signup/components/SignupStepper.jsx";
 import {
   africaCountries,
@@ -15,6 +30,7 @@ import {
   isValidPhone,
   ownerSignupSchema,
   SAFE_TEXT_RE,
+  signupRequestSchema,
   shopSignupSchema,
 } from "../features/signup/schemas.js";
 import { useSignupStore } from "../features/signup/store.js";
@@ -57,12 +73,24 @@ function SignupProgress({ currentStep }) {
 }
 
 export default function SignupPage() {
+  const [searchParams] = useSearchParams();
   const step = useSignupStore((state) => state.step);
   const boutique = useSignupStore((state) => state.boutique);
   const proprietaire = useSignupStore((state) => state.proprietaire);
+  const abonnement = useSignupStore((state) => state.abonnement);
   const setBoutique = useSignupStore((state) => state.setBoutique);
   const setProprietaire = useSignupStore((state) => state.setProprietaire);
+  const setAbonnement = useSignupStore((state) => state.setAbonnement);
   const setStep = useSignupStore((state) => state.setStep);
+  const resetSignup = useSignupStore((state) => state.resetSignup);
+  const {
+    data: plans = [],
+    isPending: arePlansPending,
+    isFetching: arePlansFetching,
+    isError: hasPlansError,
+    error: plansError,
+    refetch: refetchPlans,
+  } = usePublicPlans({ enabled: step >= 3 });
 
   const [shopValues, setShopValues] = useState({
     pays: "CG",
@@ -75,6 +103,10 @@ export default function SignupPage() {
   const [fieldErrors, setFieldErrors] = useState({});
   const [formError, setFormError] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [cguAcceptees, setCguAcceptees] = useState(false);
+  const [successData, setSuccessData] = useState(null);
+  const subscriptionTouched = useRef(false);
+  const querySelectionApplied = useRef(false);
 
   // Gestion de la saisie personnalisée si ville = "Autre ville"
   const isCongo = (shopValues.pays || "CG") === "CG";
@@ -139,6 +171,49 @@ export default function SignupPage() {
     isValidPhone(ownerValues.telephone, shopValues.pays || "CG")
   );
 
+  useEffect(() => {
+    if (
+      querySelectionApplied.current ||
+      (step !== 3 && step !== 4) ||
+      arePlansPending ||
+      hasPlansError
+    ) {
+      return;
+    }
+
+    querySelectionApplied.current = true;
+    const requestedPlan = searchParams.get("plan");
+    const requestedCycle = searchParams.get("cycle");
+    const changes = {};
+
+    if (
+      !abonnement.planId &&
+      requestedPlan &&
+      plans.some((plan) => String(plan._id ?? plan.id) === requestedPlan)
+    ) {
+      changes.planId = requestedPlan;
+    }
+
+    if (
+      !subscriptionTouched.current &&
+      (requestedCycle === "monthly" || requestedCycle === "yearly")
+    ) {
+      changes.cycle = requestedCycle;
+    }
+
+    if (Object.keys(changes).length > 0) {
+      setAbonnement(changes);
+    }
+  }, [
+    abonnement.planId,
+    arePlansPending,
+    hasPlansError,
+    plans,
+    searchParams,
+    setAbonnement,
+    step,
+  ]);
+
   function continueToOwner(event) {
     event.preventDefault();
     if (!isStep1Valid || isSubmitting) return;
@@ -167,6 +242,7 @@ export default function SignupPage() {
     const result = ownerSignupSchema.safeParse({
       ...ownerValues,
       motDePasse: password,
+      pays: shopValues.pays || "CG",
     });
 
     if (!result.success) {
@@ -187,7 +263,69 @@ export default function SignupPage() {
     setIsSubmitting(false);
   }
 
+  function updateSubscription(changes) {
+    if ("cycle" in changes || "planId" in changes) {
+      subscriptionTouched.current = true;
+    }
+    setAbonnement(changes);
+    setFormError("");
+  }
+
+  async function submitSignup() {
+    if (isSubmitting || !cguAcceptees) return;
+
+    const boutiqueRequest = { ...shopValues };
+    if (boutiqueRequest.typeActivite !== "autre") {
+      delete boutiqueRequest.autreActivite;
+    }
+
+    const request = {
+      boutique: boutiqueRequest,
+      proprietaire: {
+        ...ownerValues,
+        telephone: ownerValues.telephone?.trim() || undefined,
+        motDePasse: password,
+      },
+      abonnement,
+      cguAcceptees,
+    };
+    const result = signupRequestSchema.safeParse(request);
+
+    if (!result.success) {
+      setFormError(
+        result.error.issues[0]?.message ??
+          "Vérifiez les informations de votre demande.",
+      );
+      return;
+    }
+
+    setIsSubmitting(true);
+    setFormError("");
+
+    try {
+      const response = await createSignupRequest(result.data);
+      setSuccessData(response);
+      setPassword("");
+      setCguAcceptees(false);
+      resetSignup();
+    } catch (error) {
+      const apiError = parseApiError(error);
+      setFormError(apiError.message);
+
+      if (error?.response?.status === 409) {
+        setStep(2);
+        setFieldErrors({});
+      }
+    } finally {
+      setIsSubmitting(false);
+    }
+  }
+
   const selectedCountry = africaCountries.find((c) => c.value === (shopValues.pays || "CG"));
+  const selectedPlan = plans.find(
+    (plan) => String(plan._id ?? plan.id) === abonnement.planId,
+  );
+  const displayedStep = successData ? 4 : step;
 
   return (
     <main className="min-h-screen bg-slate-50 px-4 py-8 sm:px-6 sm:py-12">
@@ -213,19 +351,20 @@ export default function SignupPage() {
               <span className="text-lg font-bold tracking-tight">Stockline</span>
             </Link>
             <h1 className="mt-6 text-2xl font-bold tracking-tight text-slate-900 sm:text-3xl">
-              Créez votre compte boutique
+              {successData ? "Demande envoyée" : "Créez votre compte boutique"}
             </h1>
             <p className="mt-2 max-w-2xl text-sm leading-6 text-slate-500 sm:text-base">
-              Quelques informations suffisent pour soumettre votre demande à
-              l’équipe Stockline.
+              {successData
+                ? "Votre demande d’inscription a bien été transmise à l’équipe Stockline."
+                : "Quelques informations suffisent pour soumettre votre demande à l’équipe Stockline."}
             </p>
           </div>
 
           <div className="grid sm:grid-cols-[220px_minmax(0,1fr)] lg:grid-cols-[250px_minmax(0,1fr)]">
             <aside className="border-b border-slate-100 bg-slate-50/70 px-5 py-5 sm:border-b-0 sm:border-r sm:px-6 sm:py-8">
-              <SignupProgress currentStep={step} />
+              <SignupProgress currentStep={displayedStep} />
               <div className="hidden sm:block">
-                <SignupStepper currentStep={step} />
+                <SignupStepper currentStep={displayedStep} />
               </div>
             </aside>
 
@@ -233,7 +372,57 @@ export default function SignupPage() {
               aria-labelledby="signup-step-title"
               className="px-5 py-6 sm:px-8 sm:py-8"
             >
-              {step === 1 ? (
+              {successData ? (
+                <div aria-live="polite" className="py-2">
+                  <div className="flex h-12 w-12 items-center justify-center rounded-full bg-emerald-100 text-emerald-700">
+                    <CheckCircle2 aria-hidden="true" size={27} />
+                  </div>
+                  <p className="mt-5 text-xs font-semibold uppercase tracking-wide text-emerald-700">
+                    Confirmation
+                  </p>
+                  <h2
+                    className="mt-2 text-xl font-bold text-slate-900"
+                    id="signup-step-title"
+                  >
+                    Votre demande a bien été reçue
+                  </h2>
+                  <p className="mt-2 text-sm leading-6 text-slate-600">
+                    {successData.message}
+                  </p>
+                  <p className="mt-3 text-sm text-slate-600">
+                    Un suivi sera envoyé à{" "}
+                    <span className="font-semibold text-slate-900">
+                      {ownerValues.email}
+                    </span>
+                    .
+                  </p>
+                  <div className="mt-6 rounded-xl border border-slate-200 bg-slate-50 p-4">
+                    <h3 className="text-sm font-semibold text-slate-900">
+                      Prochaines étapes
+                    </h3>
+                    <ol className="mt-3 space-y-3">
+                      {successData.prochainesEtapes.map((nextStep, index) => (
+                        <li
+                          className="flex gap-3 text-sm leading-5 text-slate-600"
+                          key={nextStep}
+                        >
+                          <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-white text-xs font-semibold text-brand-700 ring-1 ring-slate-200">
+                            {index + 1}
+                          </span>
+                          {nextStep}
+                        </li>
+                      ))}
+                    </ol>
+                  </div>
+                  <Link
+                    className="mt-7 inline-flex min-h-11 items-center justify-center gap-2 rounded-lg bg-brand-600 px-5 py-2.5 text-sm font-semibold text-white transition hover:bg-brand-700 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-600"
+                    to="/"
+                  >
+                    Retour à l’accueil
+                    <ArrowRight aria-hidden="true" size={16} />
+                  </Link>
+                </div>
+              ) : step === 1 ? (
                 <>
                   <p className="text-xs font-semibold uppercase tracking-wide text-brand-700">
                     Étape 1 · Boutique
@@ -600,7 +789,7 @@ export default function SignupPage() {
                         }`}
                         id="owner-phone"
                         inputMode="tel"
-                        maxLength={22}
+                        maxLength={20}
                         onChange={(event) => {
                           const formatted = formatPhoneInput(event.target.value, shopValues.pays || "CG");
                           updateOwnerField("telephone", formatted);
@@ -748,31 +937,74 @@ export default function SignupPage() {
                     </div>
                   </form>
                 </>
+              ) : step === 3 ? (
+                <SignupPlanStep
+                  cycle={abonnement.cycle}
+                  error={plansError}
+                  isFetching={arePlansFetching}
+                  isError={hasPlansError}
+                  isPending={arePlansPending}
+                  jourPrelevement={abonnement.jourPrelevement}
+                  onBack={() => {
+                    setFormError("");
+                    setStep(2);
+                  }}
+                  onChange={updateSubscription}
+                  onContinue={() => {
+                    setFormError("");
+                    setStep(4);
+                  }}
+                  planId={abonnement.planId}
+                  plans={plans}
+                  refetch={refetchPlans}
+                />
+              ) : step === 4 && selectedPlan ? (
+                <SignupReviewStep
+                  abonnement={abonnement}
+                  boutique={shopValues}
+                  cguAcceptees={cguAcceptees}
+                  cycle={abonnement.cycle}
+                  errorMessage={formError}
+                  isSubmitting={isSubmitting}
+                  jourPrelevement={abonnement.jourPrelevement}
+                  onAcceptTerms={setCguAcceptees}
+                  onBack={() => {
+                    setFormError("");
+                    setStep(3);
+                  }}
+                  onEdit={(targetStep) => {
+                    setFormError("");
+                    setStep(targetStep);
+                  }}
+                  onSubmit={submitSignup}
+                  plan={selectedPlan}
+                  proprietaire={ownerValues}
+                />
               ) : (
                 <>
                   <p className="text-xs font-semibold uppercase tracking-wide text-brand-700">
-                    Étape {step} · Prochainement
+                    Étape {step} · Forfait
                   </p>
                   <h2
                     className="mt-2 text-xl font-bold text-slate-900"
                     id="signup-step-title"
                   >
-                    La suite du parcours arrive bientôt
+                    Sélectionnez un forfait disponible
                   </h2>
                   <p className="mt-2 text-sm leading-6 text-slate-500">
-                    Les étapes de sélection du forfait et de confirmation seront
-                    disponibles dans la suite du parcours d’inscription.
+                    Le forfait sélectionné n’est plus disponible. Revenez à
+                    l’étape précédente pour en choisir un autre.
                   </p>
                   <button
                     className="mt-7 inline-flex min-h-11 items-center gap-2 rounded-lg border border-slate-200 px-4 py-2.5 text-sm font-semibold text-slate-700 hover:bg-slate-50"
                     onClick={() => {
-                      setStep(2);
+                      setStep(3);
                       setFormError("");
                     }}
                     type="button"
                   >
                     <ArrowLeft aria-hidden="true" size={16} />
-                    Retour aux coordonnées
+                    Choisir un forfait
                   </button>
                 </>
               )}
@@ -780,13 +1012,18 @@ export default function SignupPage() {
           </div>
         </div>
 
-        <p className="mt-5 text-center text-xs leading-5 text-slate-500">
-          En continuant, vous pourrez consulter nos{" "}
-          <Link className="font-medium text-brand-700 hover:underline" to="/cgu">
-            conditions générales d’utilisation
-          </Link>{" "}
-          à l’étape de confirmation.
-        </p>
+        {!successData && (
+          <p className="mt-5 text-center text-xs leading-5 text-slate-500">
+            En continuant, vous pourrez consulter nos{" "}
+            <Link
+              className="font-medium text-brand-700 hover:underline"
+              to="/cgu"
+            >
+              conditions générales d’utilisation
+            </Link>{" "}
+            à l’étape de confirmation.
+          </p>
+        )}
       </div>
     </main>
   );

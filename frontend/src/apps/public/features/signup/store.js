@@ -15,10 +15,17 @@ const initialOwner = {
   // ⚠️  motDePasse intentionnellement EXCLU du store (jamais en mémoire persistante)
 };
 
+const initialSubscription = {
+  planId: "",
+  cycle: "monthly",
+  jourPrelevement: 1,
+};
+
 export const useSignupStore = create((set) => ({
   step: 1,
   boutique: initialShop,
   proprietaire: initialOwner,
+  abonnement: initialSubscription,
 
   setBoutique: (boutique) =>
     set((state) => ({ boutique: { ...state.boutique, ...boutique } })),
@@ -34,5 +41,17 @@ export const useSignupStore = create((set) => ({
       },
     })),
 
+  setAbonnement: (abonnement) =>
+    set((state) => ({
+      abonnement: { ...state.abonnement, ...abonnement },
+    })),
+
   setStep: (step) => set({ step }),
+  resetSignup: () =>
+    set({
+      step: 1,
+      boutique: initialShop,
+      proprietaire: initialOwner,
+      abonnement: initialSubscription,
+    }),
 }));

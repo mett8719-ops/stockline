@@ -90,7 +90,7 @@ export default function SignupPage() {
     isError: hasPlansError,
     error: plansError,
     refetch: refetchPlans,
-  } = usePublicPlans({ enabled: step === 3 || step === 4 });
+  } = usePublicPlans({ enabled: step >= 3 });
 
   const [shopValues, setShopValues] = useState({
     pays: "CG",

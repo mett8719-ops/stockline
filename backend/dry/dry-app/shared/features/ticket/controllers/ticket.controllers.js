@@ -64,10 +64,17 @@ const list = asyncHandler(async (req, res) => {
   if (priorite) filtre.priorite = priorite;
 
   if (q) {
-    filtre.$or = [
+    const conditionsRecherche = [
       { sujet: { $regex: q, $options: "i" } },
       { reference: { $regex: q, $options: "i" } },
     ];
+
+    // Côté plateforme : recherche également insensible à la casse sur le nom de la boutique
+    if (req.user.isPlatform) {
+      conditionsRecherche.push({ shopNom: { $regex: q, $options: "i" } });
+    }
+
+    filtre.$or = conditionsRecherche;
   }
 
   const [tickets, total, compteurs] = await Promise.all([

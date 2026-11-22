@@ -1,5 +1,13 @@
 import { useEffect, useRef, useState } from "react";
-import { ArrowDown, ArrowUp, RefreshCw, X } from "lucide-react";
+import {
+  ArrowDown,
+  ArrowUp,
+  Check,
+  ChevronDown,
+  RefreshCw,
+  Search,
+  X,
+} from "lucide-react";
 import { parseApiError } from "@/core/api/errors.js";
 import { useCreateStockMovement, useStockProducts } from "../hooks.js";
 
@@ -33,6 +41,9 @@ export default function StockMovementModal({ onClose, onSaved }) {
   const createMovement = useCreateStockMovement();
   const [type, setType] = useState("entree");
   const [produitId, setProduitId] = useState("");
+  const [productSearch, setProductSearch] = useState("");
+  const [isProductListOpen, setIsProductListOpen] = useState(false);
+  const [activeProductIndex, setActiveProductIndex] = useState(-1);
   const [quantite, setQuantite] = useState("");
   const [raison, setRaison] = useState("");
   const [errorMessage, setErrorMessage] = useState("");
@@ -41,15 +52,61 @@ export default function StockMovementModal({ onClose, onSaved }) {
   const selectedProduct = products.find(
     (product) => (product.id || product._id) === produitId,
   );
+  const filteredProducts = products.filter((product) =>
+    product.nom.toLocaleLowerCase("fr").includes(productSearch.trim().toLocaleLowerCase("fr")),
+  );
+  const activeProduct =
+    isProductListOpen && activeProductIndex >= 0
+      ? filteredProducts[activeProductIndex]
+      : null;
 
   useEffect(() => {
     const dialog = dialogRef.current;
     if (!dialog) return undefined;
 
     dialog.showModal();
-    dialog.querySelector("select")?.focus();
+    dialog.querySelector("#stock-product")?.focus();
     return () => dialog.close();
   }, []);
+
+  function selectProduct(product) {
+    setProduitId(product.id || product._id);
+    setProductSearch("");
+    setIsProductListOpen(false);
+    setActiveProductIndex(-1);
+    setErrorMessage("");
+  }
+
+  function handleProductKeyDown(event) {
+    if (event.key === "ArrowDown") {
+      event.preventDefault();
+      setIsProductListOpen(true);
+      setActiveProductIndex((currentIndex) =>
+        filteredProducts.length
+          ? (currentIndex + 1) % filteredProducts.length
+          : -1,
+      );
+    } else if (event.key === "ArrowUp") {
+      event.preventDefault();
+      setIsProductListOpen(true);
+      setActiveProductIndex((currentIndex) =>
+        filteredProducts.length
+          ? (currentIndex <= 0 ? filteredProducts.length : currentIndex) - 1
+          : -1,
+      );
+    } else if (event.key === "Enter" && isProductListOpen) {
+      const activeProduct = filteredProducts[activeProductIndex];
+      if (activeProduct) {
+        event.preventDefault();
+        selectProduct(activeProduct);
+      }
+    } else if (event.key === "Escape" && isProductListOpen) {
+      event.preventDefault();
+      setProductSearch("");
+      setIsProductListOpen(false);
+      setActiveProductIndex(-1);
+    }
+  }
 
   function changeType(nextType) {
     setType(nextType);
@@ -160,30 +217,107 @@ export default function StockMovementModal({ onClose, onSaved }) {
               <label className="mb-1.5 block text-sm font-medium text-slate-700" htmlFor="stock-product">
                 Produit
               </label>
-              <select
-                className={inputClassName}
-                disabled={productsQuery.isPending || products.length === 0}
-                id="stock-product"
-                onChange={(event) => {
-                  setProduitId(event.target.value);
-                  setErrorMessage("");
-                }}
-                required
-                value={produitId}
-              >
-                <option value="">
-                  {productsQuery.isPending
-                    ? "Chargement des produits…"
-                    : products.length
-                      ? "Sélectionner un produit"
-                      : "Aucun produit actif"}
-                </option>
-                {products.map((product) => (
-                  <option key={product.id || product._id} value={product.id || product._id}>
-                    {product.nom} — {product.stockActuel} {product.unite || "pièce"}
-                  </option>
-                ))}
-              </select>
+              <div className="relative min-w-0">
+                <Search
+                  aria-hidden="true"
+                  className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400"
+                />
+                <input
+                  aria-activedescendant={
+                    activeProduct
+                      ? `stock-product-option-${activeProduct.id || activeProduct._id}`
+                      : undefined
+                  }
+                  aria-autocomplete="list"
+                  aria-controls={isProductListOpen ? "stock-product-options" : undefined}
+                  aria-expanded={isProductListOpen}
+                  aria-haspopup="listbox"
+                  aria-required="true"
+                  autoComplete="off"
+                  className={`${inputClassName} min-w-0 max-w-full pl-9 pr-10`}
+                  disabled={productsQuery.isPending || products.length === 0}
+                  id="stock-product"
+                  onBlur={() => {
+                    setProductSearch("");
+                    setIsProductListOpen(false);
+                    setActiveProductIndex(-1);
+                  }}
+                  onChange={(event) => {
+                    setProductSearch(event.target.value);
+                    setProduitId("");
+                    setIsProductListOpen(true);
+                    setActiveProductIndex(0);
+                    setErrorMessage("");
+                  }}
+                  onClick={() => {
+                    if (!isProductListOpen) {
+                      setProductSearch("");
+                      setIsProductListOpen(true);
+                      setActiveProductIndex(-1);
+                    }
+                  }}
+                  onKeyDown={handleProductKeyDown}
+                  placeholder={
+                    productsQuery.isPending
+                      ? "Chargement des produits…"
+                      : products.length
+                        ? "Sélectionner un produit"
+                        : "Aucun produit actif"
+                  }
+                  role="combobox"
+                  type="text"
+                  value={isProductListOpen ? productSearch : selectedProduct?.nom || ""}
+                />
+                <ChevronDown
+                  aria-hidden="true"
+                  className={`pointer-events-none absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400 transition-transform ${
+                    isProductListOpen ? "rotate-180" : ""
+                  }`}
+                />
+                {isProductListOpen && (
+                  <div
+                    className="absolute left-0 right-0 top-full z-10 mt-1 max-h-48 overflow-y-auto overscroll-contain rounded-lg border border-slate-200 bg-white py-1 shadow-lg"
+                    id="stock-product-options"
+                    role="listbox"
+                    aria-label="Produits disponibles"
+                  >
+                    {filteredProducts.length ? (
+                      filteredProducts.map((product, index) => {
+                        const productKey = product.id || product._id;
+                        const stockLabel = `${product.stockActuel} ${product.unite || "pièce"}`;
+
+                        return (
+                          <div
+                            aria-selected={produitId === productKey}
+                            className={`flex min-w-0 cursor-pointer items-center gap-2 px-3 py-2 text-sm ${
+                              index === activeProductIndex
+                                ? "bg-brand-50 text-brand-700"
+                                : "text-slate-700 hover:bg-slate-50"
+                            }`}
+                            id={`stock-product-option-${productKey}`}
+                            key={productKey}
+                            onClick={() => selectProduct(product)}
+                            onMouseDown={(event) => event.preventDefault()}
+                            role="option"
+                          >
+                            <span className="min-w-0 flex-1 truncate">{product.nom}</span>
+                            <span className="shrink-0 text-xs text-slate-500">
+                              {stockLabel}
+                            </span>
+                            {produitId === productKey && (
+                              <Check aria-hidden="true" className="h-4 w-4 shrink-0" />
+                            )}
+                          </div>
+                        );
+                      })
+                    ) : (
+                      <p className="px-3 py-2 text-sm text-slate-500">
+                        Aucun produit correspondant.
+                      </p>
+                    )}
+                  </div>
+                )}
+              </div>
               {productsQuery.isError && (
                 <p className="mt-1 text-xs text-red-600" role="alert">
                   {parseApiError(productsQuery.error).message}

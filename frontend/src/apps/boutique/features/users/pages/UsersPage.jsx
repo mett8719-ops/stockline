@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import {
   Check,
   ChevronDown,
@@ -360,6 +360,13 @@ export default function UsersPage({ initialTab = "members", embedded = false }) 
   const displayedRoles = [...predefinedRoles, ...customRoles];
   const availablePermissions = rolesQuery.data?.permissionsDisponibles || [];
   const [expandedRoleId, setExpandedRoleId] = useState("predefined-admin");
+
+  useEffect(() => {
+    if (!feedback || feedback.type === "error") return undefined;
+
+    const timeoutId = window.setTimeout(() => setFeedback(null), 3500);
+    return () => window.clearTimeout(timeoutId);
+  }, [feedback]);
 
   function getMemberCount(role) {
     return employees.filter((employee) =>

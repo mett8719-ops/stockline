@@ -6,6 +6,7 @@ import {
   Plus,
   RefreshCw,
   Shield,
+  Trash2,
   UserRoundPlus,
   UsersRound,
 } from "lucide-react";
@@ -14,7 +15,11 @@ import { useAuth } from "@/core/hooks/useAuth.js";
 import CustomRoleDialog from "../components/CustomRoleDialog.jsx";
 import EmployeeActionDialog from "../components/EmployeeActionDialog.jsx";
 import InviteEmployeeDialog from "../components/InviteEmployeeDialog.jsx";
-import { useEmployeeRoles, useEmployees } from "../hooks.js";
+import {
+  useDeleteEmployee,
+  useEmployeeRoles,
+  useEmployees,
+} from "../hooks.js";
 
 const roleLabels = {
   admin: "Administrateur",
@@ -107,7 +112,15 @@ function formatLastConnection(value) {
   return `Dernière connexion : ${dateFormat.format(date)}`;
 }
 
-function EmployeeRow({ employee, isCurrentUser, roleOptions, onAction }) {
+function EmployeeRow({
+  employee,
+  isCurrentUser,
+  isLastActiveAdmin,
+  isDeleting,
+  roleOptions,
+  onAction,
+  onDelete,
+}) {
   const roleLabel =
     employee.roleLibelle ||
     roleLabels[employee.role] ||
@@ -149,7 +162,7 @@ function EmployeeRow({ employee, isCurrentUser, roleOptions, onAction }) {
           {formatLastConnection(employee.derniereConnexion)}
         </p>
       </div>
-      <div className="flex items-center justify-end gap-2">
+      <div className="flex flex-wrap items-center justify-end gap-2">
         <button
           aria-label={`Modifier les informations de ${employee.nom}`}
           className="inline-flex h-9 items-center gap-1.5 rounded-lg px-2.5 text-xs font-medium text-slate-500 hover:bg-slate-100 hover:text-slate-800 focus:outline-none focus:ring-2 focus:ring-brand-200"
@@ -196,6 +209,23 @@ function EmployeeRow({ employee, isCurrentUser, roleOptions, onAction }) {
               isFrozen || isInactive ? "translate-x-1" : "translate-x-6"
             }`}
           />
+        </button>
+        <button
+          aria-label={`Supprimer ${employee.nom}`}
+          className="inline-flex h-9 items-center gap-1.5 rounded-lg px-2.5 text-xs font-medium text-red-600 hover:bg-red-50 hover:text-red-700 focus:outline-none focus:ring-2 focus:ring-red-200 disabled:cursor-not-allowed disabled:opacity-40"
+          disabled={isCurrentUser || isLastActiveAdmin || isDeleting}
+          onClick={() => onDelete(employee)}
+          title={
+            isCurrentUser
+              ? "Vous ne pouvez pas supprimer votre propre compte"
+              : isLastActiveAdmin
+                ? "La boutique doit conserver un administrateur actif"
+                : "Supprimer cet utilisateur"
+          }
+          type="button"
+        >
+          <Trash2 aria-hidden="true" className="h-4 w-4" />
+          <span className="sm:hidden">Supprimer</span>
         </button>
       </div>
     </article>
@@ -319,6 +349,7 @@ export default function UsersPage({ initialTab = "members", embedded = false }) 
   const [feedback, setFeedback] = useState(null);
   const employeesQuery = useEmployees();
   const rolesQuery = useEmployeeRoles();
+  const deleteEmployeeMutation = useDeleteEmployee();
   const employees = employeesQuery.data || [];
   const predefinedRoles = (rolesQuery.data?.rolesPredefinis || []).map((role) => ({
     id: `predefined-${role.nom}`,
@@ -380,6 +411,27 @@ export default function UsersPage({ initialTab = "members", embedded = false }) 
     setFeedback({ message, type });
   }
 
+  function handleDeleteEmployee(employee) {
+    const employeeId = employee.id || employee._id;
+    const confirmed = window.confirm(
+      `Supprimer « ${employee.nom} » de la liste des utilisateurs ?`,
+    );
+
+    if (!confirmed) return;
+
+    setFeedback(null);
+    deleteEmployeeMutation.mutate(employeeId, {
+      onSuccess: (result) => {
+        showFeedback(
+          result?.message || `${employee.nom} a été supprimé de l’équipe.`,
+        );
+      },
+      onError: (error) => {
+        showFeedback(parseApiError(error).message, "error");
+      },
+    });
+  }
+
   function openDialog(mode, employee = null) {
     setFeedback(null);
     setDialog({ mode, employee });
@@ -391,6 +443,9 @@ export default function UsersPage({ initialTab = "members", embedded = false }) 
   }
 
   const currentUserId = user?.id || user?._id;
+  const activeAdminCount = employees.filter(
+    (employee) => employee.role === "admin" && employee.actif && !employee.gele,
+  ).length;
 
   return (
     <section className="space-y-5">
@@ -534,7 +589,15 @@ export default function UsersPage({ initialTab = "members", embedded = false }) 
               <EmployeeRow
                 employee={employee}
                 isCurrentUser={String(employee.id || employee._id) === String(currentUserId)}
+                isLastActiveAdmin={
+                  employee.role === "admin" &&
+                  employee.actif &&
+                  !employee.gele &&
+                  activeAdminCount <= 1
+                }
+                isDeleting={deleteEmployeeMutation.isPending}
                 key={employee.id || employee._id}
+                onDelete={handleDeleteEmployee}
                 onAction={openDialog}
                 roleOptions={roleOptions}
               />

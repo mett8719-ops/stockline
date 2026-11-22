@@ -3,6 +3,7 @@ import {
   fetchEmployeeRoles,
   fetchEmployees,
   inviteEmployee,
+  deleteEmployee,
   createCustomRole,
   updateCustomRole,
   updateEmployee,
@@ -49,6 +50,15 @@ export function useUpdateEmployee() {
 
   return useMutation({
     mutationFn: updateEmployee,
+    onSuccess: refreshEmployees,
+  });
+}
+
+export function useDeleteEmployee() {
+  const refreshEmployees = useRefreshEmployees();
+
+  return useMutation({
+    mutationFn: deleteEmployee,
     onSuccess: refreshEmployees,
   });
 }

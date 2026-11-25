@@ -27,7 +27,7 @@ const ShopModel = require("../../../../platform/features/shop/model/shop.model")
 
 /** GET /users — Membres de l'equipe. */
 const list = asyncHandler(async (req, res) => {
-  const membres = await UserModel.find(tenantScope(req, {}))
+  const membres = await UserModel.find(tenantScope(req, { supprimeLe: null }))
     .select("+permissions")
     .populate("customRole", "nom couleur permissions")
     .sort({ role: 1, nom: 1 })
@@ -300,6 +300,81 @@ const resetPassword = asyncHandler(async (req, res) => {
   });
 });
 
+/**
+ * DELETE /users/:id — Suppression securisee d'un employe.
+ *
+ * Reservee a un administrateur de la boutique.
+ * Garde-fous :
+ *   - Refuse la suppression de son propre compte
+ *   - Refuse la suppression du dernier administrateur actif
+ * Effets :
+ *   - Marque supprimeLe / supprimePar
+ *   - Desactive le compte (actif: false, gele: true)
+ *   - Revoque immediatement toutes les sessions actives (refreshTokens: [])
+ *   - Decremente le compteur d'utilisateurs
+ *   - Enregistre l'audit de securite (user.deleted)
+ */
+const remove = asyncHandler(async (req, res) => {
+  const { id } = req.validated.params;
+
+  const employe = await UserModel.findOne(
+    tenantScope(req, { _id: id, supprimeLe: null })
+  ).select("+refreshTokens");
+
+  if (!employe) throw AppError.notFound("Membre introuvable");
+
+  // ── GARDE-FOU 1 : ne pas supprimer son propre compte ─────────────────
+  if (String(employe._id) === String(req.user.id)) {
+    throw AppError.badRequest(
+      "Vous ne pouvez pas supprimer votre propre compte"
+    );
+  }
+
+  // ── GARDE-FOU 2 : conserver au moins un administrateur actif ─────────
+  if (employe.role === SHOP_ROLES.ADMIN && employe.actif && !employe.gele) {
+    const autresAdmins = await UserModel.countDocuments(
+      tenantScope(req, {
+        role: SHOP_ROLES.ADMIN,
+        actif: true,
+        gele: false,
+        supprimeLe: null,
+        _id: { $ne: employe._id },
+      })
+    );
+
+    if (autresAdmins === 0) {
+      throw AppError.badRequest(
+        "Votre boutique doit conserver au moins un administrateur actif"
+      );
+    }
+  }
+
+  // ── Suppression securisee (soft delete) + revocation des sessions ────
+  employe.actif = false;
+  employe.gele = true;
+  employe.supprimeLe = new Date();
+  employe.supprimePar = req.user.id;
+  employe.refreshTokens = []; // Coupe immediatement toutes les sessions en cours
+
+  await employe.save();
+
+  // Decremente le compteur d'utilisateurs de la boutique
+  await ShopModel.updateOne(
+    { _id: req.user.shopId },
+    { $inc: { "compteurs.utilisateurs": -1 } }
+  );
+
+  // Audit de securite
+  recordAudit(req, "user.deleted", {
+    severite: "haute",
+    cible: "User",
+    cibleId: employe._id,
+    avant: { nom: employe.nom, email: employe.email, role: employe.role },
+  });
+
+  return success(res, { message: "Employé supprimé avec succès" });
+});
+
 // ══ ROLES PERSONNALISES ═══════════════════════════════════════════════
 
 /** GET /roles — Roles sur mesure + roles predefinis + permissions disponibles. */
@@ -372,5 +447,5 @@ const updateRole = asyncHandler(async (req, res) => {
 });
 
 module.exports = {
-  list, invite, update, resetPassword, listRoles, createRole, updateRole,
+  list, invite, update, resetPassword, remove, listRoles, createRole, updateRole,
 };

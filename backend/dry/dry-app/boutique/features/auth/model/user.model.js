@@ -49,6 +49,14 @@ const userSchema = new mongoose.Schema(
 
     actif: { type: Boolean, default: true, index: true },
 
+    // Suppression securisee (soft delete) : preserve l'historique et l'audit
+    supprimeLe: { type: Date, default: null, index: true },
+    supprimePar: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "boutique-user",
+      default: null,
+    },
+
     // Gel individuel par l'admin de la boutique (distinct de la desactivation)
     gele: { type: Boolean, default: false },
     motifGel: { type: String, maxlength: 300 },

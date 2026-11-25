@@ -68,6 +68,13 @@ const userResponse = registerSchema(
   })
 );
 
+const messageResponse = registerSchema(
+  "UserMessageResponse",
+  z.object({
+    message: z.string(),
+  })
+);
+
 module.exports = {
-  inviteSchema, updateUserSchema, createRoleSchema, userResponse,
+  inviteSchema, updateUserSchema, createRoleSchema, userResponse, messageResponse,
 };

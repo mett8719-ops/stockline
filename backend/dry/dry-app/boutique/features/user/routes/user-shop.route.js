@@ -66,6 +66,25 @@ registerRoute({
   responses: { 200: S.userResponse },
 });
 
+router.delete(
+  "/:id",
+  authorizeRoles(SHOP_ROLES.ADMIN),
+  validate({ params: idParam }),
+  c.remove
+);
+registerRoute({
+  method: "delete", path: "/users/{id}", tags: ["Utilisateurs"], permissions: ["users"],
+  summary: "Supprimer un employe de la boutique (administrateur uniquement)",
+  description:
+    "Suppression securisee (soft delete) d'un membre de l'equipe :\n\n" +
+    "- Revoque immediatement toutes les sessions en cours\n" +
+    "- Refuse la suppression de son propre compte et du dernier administrateur actif\n" +
+    "- Conserve l'historique d'audit et les traces d'operations sans rupture de cle etrangere\n" +
+    "- Masque l'utilisateur de la liste des employes (GET /users)",
+  request: { params: idParam },
+  responses: { 200: S.messageResponse },
+});
+
 // ══ ROUTEUR ROLES PERSONNALISES ═══════════════════════════════════════
 const roleRouter = express.Router();
 roleRouter.use(requirePermission(PERMISSIONS.USERS));

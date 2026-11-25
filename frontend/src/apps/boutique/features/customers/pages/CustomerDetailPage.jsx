@@ -1,9 +1,11 @@
+import { useState } from "react";
 import { Link, useParams } from "react-router-dom";
 import {
   AlertCircle,
   ArrowLeft,
   CalendarDays,
   CircleDollarSign,
+  HandCoins,
   Mail,
   MapPin,
   Phone,
@@ -12,7 +14,8 @@ import {
   Wallet,
 } from "lucide-react";
 import { parseApiError } from "@/core/api/errors.js";
-import { useCustomer } from "../hooks.js";
+import PaymentModal from "../components/PaymentModal.jsx";
+import { useCustomer, useRecordCustomerPayment } from "../hooks.js";
 import { customerCategoryLabels } from "../schemas.js";
 
 const moneyFormat = new Intl.NumberFormat("fr-FR", {
@@ -132,6 +135,16 @@ function LoadingDetail() {
 export default function CustomerDetailPage() {
   const { customerId } = useParams();
   const customerQuery = useCustomer(customerId);
+  const paymentMutation = useRecordCustomerPayment();
+  const [isPaymentModalOpen, setIsPaymentModalOpen] = useState(false);
+  const [paymentNotice, setPaymentNotice] = useState("");
+
+  async function handleRecordPayment(payment) {
+    const result = await paymentMutation.mutateAsync({ customerId, payment });
+    setPaymentNotice(
+      `Versement enregistré. Nouveau solde dû : ${formatMoney(result.client.soldeCredit)}.`,
+    );
+  }
 
   if (customerQuery.isPending) return <LoadingDetail />;
 
@@ -161,7 +174,7 @@ export default function CustomerDetailPage() {
   }
 
   const customer = customerQuery.data;
-  const balance = Number(customer.soldeCredit) || 0;
+  const balance = Math.round((Number(customer.soldeCredit) || 0) * 100) / 100;
   const creditLimit = Number(customer.plafondCredit) || 0;
 
   return (
@@ -215,6 +228,24 @@ export default function CustomerDetailPage() {
             Client depuis le {formatDate(customer.createdAt)}
           </p>
         </div>
+        {balance > 0 && (
+          <div className="mt-5 flex flex-col gap-3 border-t border-slate-100 pt-4 sm:flex-row sm:items-center sm:justify-between">
+            <p className="text-sm text-slate-600">
+              Un versement réduit le solde dû et est enregistré dans la trésorerie.
+            </p>
+            <button
+              className="inline-flex h-10 items-center justify-center gap-2 self-start rounded-lg bg-brand-600 px-4 text-sm font-semibold text-white hover:bg-brand-700 focus:outline-none focus:ring-2 focus:ring-brand-300 focus:ring-offset-2"
+              onClick={() => {
+                setPaymentNotice("");
+                setIsPaymentModalOpen(true);
+              }}
+              type="button"
+            >
+              <HandCoins aria-hidden="true" className="h-4 w-4" />
+              Enregistrer un versement
+            </button>
+          </div>
+        )}
         {customer.notes && (
           <div className="mt-5 border-t border-slate-100 pt-4">
             <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">Notes</p>
@@ -222,6 +253,16 @@ export default function CustomerDetailPage() {
           </div>
         )}
       </section>
+
+      {paymentNotice && (
+        <p
+          aria-live="polite"
+          className="rounded-lg border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-800"
+          role="status"
+        >
+          {paymentNotice}
+        </p>
+      )}
 
       <section aria-label="Résumé du compte client" className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
         <SummaryCard
@@ -306,6 +347,16 @@ export default function CustomerDetailPage() {
           ) : <EmptyHistory>Aucune facture impayée.</EmptyHistory>}
         </HistorySection>
       </div>
+
+      {isPaymentModalOpen && (
+        <PaymentModal
+          balance={balance}
+          isPending={paymentMutation.isPending}
+          onClose={() => setIsPaymentModalOpen(false)}
+          onSubmit={handleRecordPayment}
+          partyName={customer.nom}
+        />
+      )}
     </main>
   );
 }

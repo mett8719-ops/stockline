@@ -111,6 +111,13 @@ export default function StockPage() {
     return () => window.clearTimeout(timeoutId);
   }, [search]);
 
+  useEffect(() => {
+    if (!feedback || feedback.type === "error") return undefined;
+
+    const timeoutId = window.setTimeout(() => setFeedback(null), 3500);
+    return () => window.clearTimeout(timeoutId);
+  }, [feedback]);
+
   function updateSearch(value) {
     setSearch(value);
     setPage(1);
@@ -126,7 +133,7 @@ export default function StockPage() {
       <header className="flex flex-wrap items-end justify-between gap-3">
         <div>
           <h2 className="text-xl font-semibold text-slate-900">
-            Stock &amp; Mouvements
+            Stock et  Mouvements
           </h2>
           <p className="mt-1 text-sm text-slate-500">
             Suivez les entrées, sorties et ajustements.

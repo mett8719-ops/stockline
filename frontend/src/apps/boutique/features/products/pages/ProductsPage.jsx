@@ -105,6 +105,13 @@ export default function ProductsPage() {
     return () => window.clearTimeout(timeoutId);
   }, [search]);
 
+  useEffect(() => {
+    if (!feedback || feedback.type === "error") return undefined;
+
+    const timeoutId = window.setTimeout(() => setFeedback(null), 3500);
+    return () => window.clearTimeout(timeoutId);
+  }, [feedback]);
+
   function updateSearch(value) {
     setSearch(value);
     setPage(1);

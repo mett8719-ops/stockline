@@ -20,6 +20,11 @@ export async function updateEmployee({ employeeId, changes }) {
   return data.data;
 }
 
+export async function deleteEmployee(employeeId) {
+  const { data } = await apiClient.delete(`/users/${employeeId}`);
+  return data.data;
+}
+
 export async function createCustomRole(role) {
   const { data } = await apiClient.post("/roles", role);
   return data.data;

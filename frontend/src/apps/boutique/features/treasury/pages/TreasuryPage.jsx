@@ -1,5 +1,7 @@
 import { useState } from "react";
 import {
+  Download,
+  LockKeyhole,
   ArrowDownRight,
   ArrowUpRight,
   Plus,
@@ -17,10 +19,19 @@ import ErrorState from "@/components/ui/ErrorState.jsx";
 import Skeleton from "@/components/ui/Skeleton.jsx";
 import { parseApiError } from "@/core/api/errors.js";
 import {
+  useCloseTreasurySession,
   useCreateTreasuryTransaction,
+  useOpenTreasurySession,
+  useTreasuryExport,
   useTreasuryOverview,
 } from "../hooks.js";
 import TransactionFormModal from "../components/TransactionFormModal.jsx";
+import {
+  CashClosingReportModal,
+  CloseCashSessionModal,
+  OpenCashSessionModal,
+} from "../components/CashSessionModals.jsx";
+import { downloadTreasuryCsv } from "../utils/exportCsv.js";
 
 const periods = [
   { days: 3, label: "3 derniers jours" },
@@ -192,6 +203,10 @@ function TreasurySkeleton() {
 export default function TreasuryPage() {
   const [selectedPeriod, setSelectedPeriod] = useState(3);
   const [isTransactionModalOpen, setIsTransactionModalOpen] = useState(false);
+  const [isOpenSessionModalOpen, setIsOpenSessionModalOpen] = useState(false);
+  const [isCloseSessionModalOpen, setIsCloseSessionModalOpen] = useState(false);
+  const [closingReport, setClosingReport] = useState(null);
+  const [exportMessage, setExportMessage] = useState("");
   const [today] = useState(() => new Date().toISOString().slice(0, 10));
   const { shop } = useAuth();
   const {
@@ -203,9 +218,38 @@ export default function TreasuryPage() {
     isFetching,
   } = useTreasuryOverview(selectedPeriod);
   const createTransaction = useCreateTreasuryTransaction();
+  const openSession = useOpenTreasurySession();
+  const closeSession = useCloseTreasurySession();
+  const exportTreasury = useTreasuryExport();
 
   async function handleCreateTransaction(transaction) {
     await createTransaction.mutateAsync(transaction);
+  }
+
+  async function handleOpenSession(session) {
+    await openSession.mutateAsync(session);
+  }
+
+  async function handleCloseSession(session) {
+    const result = await closeSession.mutateAsync(session);
+    setClosingReport(result);
+  }
+
+  async function handleExport() {
+    setExportMessage("");
+    const end = new Date();
+    const start = new Date(end.getTime() - selectedPeriod * 24 * 60 * 60 * 1000);
+
+    try {
+      const exportData = await exportTreasury.mutateAsync({
+        from: start.toISOString(),
+        to: end.toISOString(),
+      });
+      downloadTreasuryCsv(exportData);
+      setExportMessage("Le fichier CSV compatible Excel a été téléchargé.");
+    } catch (exportError) {
+      setExportMessage(parseApiError(exportError).message);
+    }
   }
 
   const formattedPeriod = overview
@@ -228,10 +272,29 @@ export default function TreasuryPage() {
             Suivi de caisse et des flux financiers
           </p>
         </div>
-        <Button onClick={() => setIsTransactionModalOpen(true)}>
-          <Plus className="h-4 w-4" aria-hidden="true" />
-          Enregistrer
-        </Button>
+        <div className="flex flex-wrap gap-2">
+          {overview?.sessionCaisse ? (
+            <Button
+              variant="secondary"
+              onClick={() => setIsCloseSessionModalOpen(true)}
+            >
+              <LockKeyhole className="h-4 w-4" aria-hidden="true" />
+              Clôture de caisse
+            </Button>
+          ) : (
+            <Button
+              variant="secondary"
+              onClick={() => setIsOpenSessionModalOpen(true)}
+            >
+              <Wallet className="h-4 w-4" aria-hidden="true" />
+              Ouvrir la caisse
+            </Button>
+          )}
+          <Button onClick={() => setIsTransactionModalOpen(true)}>
+            <Plus className="h-4 w-4" aria-hidden="true" />
+            Enregistrer
+          </Button>
+        </div>
       </header>
 
       {isPending && <TreasurySkeleton />}
@@ -278,6 +341,15 @@ export default function TreasuryPage() {
                 )}
               </div>
               <div className="flex items-center gap-2">
+                <Button
+                  variant="secondary"
+                  className="!min-h-11"
+                  isLoading={exportTreasury.isPending}
+                  onClick={handleExport}
+                >
+                  <Download className="h-4 w-4" aria-hidden="true" />
+                  Exporter CSV
+                </Button>
                 <Badge variant={isFetching ? "warning" : "success"}>
                   {isFetching ? "Actualisation…" : "À jour"}
                 </Badge>
@@ -306,10 +378,60 @@ export default function TreasuryPage() {
               onRefresh={() => refetch()}
               today={today}
             />
+            {exportMessage && (
+              <p
+                className="border-t border-slate-100 px-5 py-3 text-sm text-slate-600"
+                role="status"
+              >
+                {exportMessage}
+              </p>
+            )}
           </section>
+          {overview.sessionCaisse && (
+            <aside className="rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-900">
+              <p className="font-semibold">Session de caisse ouverte</p>
+              <p className="mt-1 text-emerald-800">
+                {overview.sessionCaisse.caisseNom || "Caisse principale"}
+                {overview.sessionCaisse.ouvertParNom
+                  ? ` · ouverte par ${overview.sessionCaisse.ouvertParNom}`
+                  : ""}
+                {overview.sessionCaisse.ouverteLe
+                  ? ` · depuis le ${formatDateTime(overview.sessionCaisse.ouverteLe)}`
+                  : ""}
+              </p>
+              <p className="mt-1 text-xs text-emerald-700">
+                Fonds initial :{" "}
+                {formatMoney(overview.sessionCaisse.fondsOuverture)}
+              </p>
+            </aside>
+          )}
         </>
       )}
 
+      {exportMessage && !overview && (
+        <p className="text-sm text-slate-600" role="status">
+          {exportMessage}
+        </p>
+      )}
+
+      <OpenCashSessionModal
+        isOpen={isOpenSessionModalOpen}
+        onClose={() => setIsOpenSessionModalOpen(false)}
+        onSubmit={handleOpenSession}
+        isSubmitting={openSession.isPending}
+      />
+      <CloseCashSessionModal
+        isOpen={isCloseSessionModalOpen}
+        onClose={() => setIsCloseSessionModalOpen(false)}
+        session={overview?.sessionCaisse}
+        onSubmit={handleCloseSession}
+        isSubmitting={closeSession.isPending}
+      />
+      <CashClosingReportModal
+        report={closingReport?.rapport}
+        session={closingReport?.session}
+        onClose={() => setClosingReport(null)}
+      />
       <TransactionFormModal
         isOpen={isTransactionModalOpen}
         onClose={() => setIsTransactionModalOpen(false)}

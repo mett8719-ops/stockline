@@ -58,3 +58,24 @@ export async function createCustomer(customer) {
 
   return result;
 }
+
+export async function recordCustomerPayment({ customerId, payment }) {
+  const { data: response } = await apiClient.post(
+    `/customers/${encodeURIComponent(customerId)}/payments`,
+    payment,
+  );
+  const result = response?.data;
+
+  if (
+    !result?.versement ||
+    typeof result.versement !== "object" ||
+    !result.client ||
+    typeof result.client.id !== "string" ||
+    typeof result.client.nom !== "string" ||
+    !Number.isFinite(result.client.soldeCredit)
+  ) {
+    throw new TypeError("La réponse d’enregistrement du versement est invalide.");
+  }
+
+  return result;
+}

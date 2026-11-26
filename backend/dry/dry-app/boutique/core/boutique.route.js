@@ -32,6 +32,7 @@ const reportRoute = require("../features/report/routes/report.route");
 const suggestionRoute = require("../features/suggestion/routes/suggestion.route");
 const subscriptionRoute = require("../features/subscription/routes/subscription.route");
 const shopSettingsRoute = require("../features/shop-settings/routes/shop-settings.route");
+const uploadRoute = require("../features/upload/routes/upload.route");
 
 const router = express.Router();
 
@@ -61,5 +62,6 @@ router.use("/suggestions", suggestionRoute);
 router.use("/subscription", subscriptionRoute);
 router.use("/settings", shopSettingsRoute);
 router.use("/shop", shopSettingsRoute);
+router.use("/uploads", uploadRoute);
 
 module.exports = router;

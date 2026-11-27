@@ -1,0 +1,329 @@
+import { Search, ShoppingCart, Trash2 } from "lucide-react";
+import { useMemo, useState } from "react";
+import { usePosCart } from "../store/cartStore.js";
+
+const categories = [
+  "Tous",
+  "Céréales",
+  "Huiles",
+  "Épicerie",
+  "Produits laitiers",
+  "Hygiène",
+  "Conserves",
+  "Boisson",
+];
+
+const products = [
+  { id: "p-1", name: "Riz local 25kg", price: 15000, stock: 48, category: "Céréales", unit: "sac" },
+  { id: "p-2", name: "Huile palma 5L", price: 4500, stock: 3, category: "Huiles", unit: "bidon" },
+  { id: "p-3", name: "Sucre cristal 1kg", price: 950, stock: 120, category: "Épicerie", unit: "kg" },
+  { id: "p-4", name: "Farine de blé 25kg", price: 22000, stock: 15, category: "Céréales", unit: "sac" },
+  { id: "p-5", name: "Lait Nido 900g", price: 8500, stock: 24, category: "Produits laitiers", unit: "boîte" },
+  { id: "p-6", name: "Savon Omo 1kg", price: 2200, stock: 60, category: "Hygiène", unit: "paquet" },
+  { id: "p-7", name: "Tomates concentrées 400g", price: 1200, stock: 2, category: "Conserves", unit: "boîte" },
+  { id: "p-8", name: "Sardines Jealsa 125g", price: 750, stock: 85, category: "Conserves", unit: "boîte" },
+  { id: "p-9", name: "Eau minérale 1,5L", price: 500, stock: 144, category: "Boisson", unit: "bouteille" },
+  { id: "p-10", name: "Coca-Cola 33cl", price: 600, stock: 72, category: "Boisson", unit: "bouteille" },
+  { id: "p-11", name: "Bière Castel 65cl", price: 900, stock: 96, category: "Boisson", unit: "bouteille" },
+  { id: "p-12", name: "Maribor", price: 2500, stock: 40, category: "Boisson", unit: "bouteille" },
+  { id: "p-13", name: "Allumettes", price: 100, stock: 150, category: "Épicerie", unit: "boîte" },
+  { id: "p-14", name: "Sel fin 1kg", price: 400, stock: 80, category: "Épicerie", unit: "sac" },
+  { id: "p-15", name: "Maïs concassé 25kg", price: 12000, stock: 7, category: "Céréales", unit: "sac" },
+];
+
+const paymentMethods = [
+  { key: "especes", label: "Espèces" },
+  { key: "mobile", label: "Mobile" },
+  { key: "credit", label: "Crédit" },
+];
+
+function formatMoney(value) {
+  return `${new Intl.NumberFormat("fr-FR", { maximumFractionDigits: 0 }).format(value)} CDF`;
+}
+
+function ProductCard({ product, onAdd }) {
+  const lowStock = product.stock <= 10;
+
+  return (
+    <button
+      type="button"
+      onClick={() => onAdd(product)}
+      className="flex min-h-[150px] flex-col justify-between rounded-xl border border-slate-200 bg-white p-3 text-left shadow-sm transition hover:border-blue-200 hover:shadow-md"
+    >
+      <div className="mb-4 flex h-10 w-10 items-center justify-center rounded-lg bg-slate-200 text-lg">
+        📦
+      </div>
+      <div>
+        <h3 className="text-base font-medium text-slate-800">{product.name}</h3>
+        <p className="mt-2 text-xl font-bold text-blue-600">{formatMoney(product.price)}</p>
+        <p className={`mt-1 text-xs ${lowStock ? "text-amber-600" : "text-slate-500"}`}>
+          Stock: {product.stock} {product.unit}
+        </p>
+      </div>
+    </button>
+  );
+}
+
+export default function PosPage() {
+  const [activeCategory, setActiveCategory] = useState("Tous");
+  const [query, setQuery] = useState("");
+  const [checkoutOpen, setCheckoutOpen] = useState(false);
+  const [checkoutError, setCheckoutError] = useState("");
+  const {
+    items,
+    total,
+    count,
+    addItem,
+    removeItem,
+    updateQuantity,
+    selectedPayment,
+    setSelectedPayment,
+    client,
+    setClient,
+    paymentAmount,
+    setPaymentAmount,
+    submitSale,
+    lastSale,
+  } = usePosCart();
+
+  const filteredProducts = useMemo(() => {
+    const normalizedQuery = query.trim().toLowerCase();
+    return products.filter((product) => {
+      const matchesCategory =
+        activeCategory === "Tous" || product.category === activeCategory;
+      const matchesQuery =
+        normalizedQuery.length === 0 ||
+        product.name.toLowerCase().includes(normalizedQuery) ||
+        product.category.toLowerCase().includes(normalizedQuery);
+      return matchesCategory && matchesQuery;
+    });
+  }, [activeCategory, query]);
+
+  function handleSubmitSale() {
+    try {
+      const sale = submitSale();
+      setCheckoutError("");
+      setCheckoutOpen(false);
+      console.info("Vente validée", sale);
+    } catch (error) {
+      setCheckoutError(error.message || "La vente ne peut pas être validée.");
+    }
+  }
+
+  return (
+    <main className="min-h-screen bg-slate-100 p-4">
+      <div className="mx-auto grid max-w-[1360px] grid-cols-1 gap-4 xl:grid-cols-[minmax(0,2.15fr)_380px]">
+        <section className="rounded-2xl border border-slate-200 bg-slate-50 p-4 shadow-sm">
+          <div className="mb-4 flex items-center gap-3 rounded-xl border border-slate-200 bg-white px-3 py-2.5 shadow-sm">
+            <Search className="h-4 w-4 text-slate-400" aria-hidden="true" />
+            <input
+              aria-label="Rechercher un produit"
+              className="w-full border-0 bg-transparent text-sm text-slate-700 outline-none placeholder:text-slate-400"
+              onChange={(event) => setQuery(event.target.value)}
+              placeholder="Rechercher un produit..."
+              type="search"
+              value={query}
+            />
+          </div>
+
+          <div className="mb-4 flex flex-wrap gap-2">
+            {categories.map((category) => (
+              <button
+                key={category}
+                type="button"
+                onClick={() => setActiveCategory(category)}
+                className={`rounded-lg border px-3 py-1.5 text-sm font-medium transition ${
+                  activeCategory === category
+                    ? "border-blue-600 bg-blue-600 text-white shadow-sm"
+                    : "border-slate-200 bg-white text-slate-700 hover:border-slate-300"
+                }`}
+              >
+                {category}
+              </button>
+            ))}
+          </div>
+
+          <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
+            {filteredProducts.map((product) => (
+              <ProductCard key={product.id} onAdd={addItem} product={product} />
+            ))}
+          </div>
+        </section>
+
+        <aside className="rounded-2xl border border-slate-200 bg-slate-50 p-4 shadow-sm">
+          <div className="mb-4 flex items-center gap-2 border-b border-slate-200 pb-3 text-lg font-semibold text-slate-800">
+            <ShoppingCart className="h-5 w-5" aria-hidden="true" />
+            Panier
+          </div>
+
+          {items.length === 0 ? (
+            <div className="flex min-h-[365px] flex-col items-center justify-center gap-4 text-center text-slate-500">
+              <ShoppingCart className="h-14 w-14 text-slate-300" aria-hidden="true" />
+              <div>
+                <p className="text-lg font-medium text-slate-700">Panier vide</p>
+                <p className="text-sm">Sélectionnez des produits</p>
+              </div>
+            </div>
+          ) : (
+            <div className="space-y-3">
+              {items.map((item) => (
+                <div key={item.id} className="rounded-xl border border-slate-200 bg-white p-3">
+                  <div className="mb-2 flex items-start justify-between gap-3">
+                    <div>
+                      <p className="font-medium text-slate-800">{item.name}</p>
+                      <p className="text-xs text-slate-500">{formatMoney(item.price)} / unité</p>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => removeItem(item.id)}
+                      className="text-slate-400 transition hover:text-red-500"
+                      aria-label={`Retirer ${item.name}`}
+                    >
+                      <Trash2 className="h-4 w-4" aria-hidden="true" />
+                    </button>
+                  </div>
+
+                  <div className="flex items-center justify-between gap-2">
+                    <div className="inline-flex items-center gap-2 rounded-lg border border-slate-200 bg-slate-50 px-2 py-1">
+                      <button
+                        type="button"
+                        className="h-6 w-6 rounded-md text-base text-slate-600 hover:bg-slate-200"
+                        onClick={() => {
+                          if (item.quantity <= 1) {
+                            removeItem(item.id);
+                            return;
+                          }
+                          updateQuantity(item.id, item.quantity - 1);
+                        }}
+                        aria-label={`Diminuer la quantité de ${item.name}`}
+                      >
+                        −
+                      </button>
+                      <span className="min-w-5 text-center text-sm font-medium text-slate-700">
+                        {item.quantity}
+                      </span>
+                      <button
+                        type="button"
+                        className="h-6 w-6 rounded-md text-base text-slate-600 hover:bg-slate-200"
+                        onClick={() => updateQuantity(item.id, item.quantity + 1)}
+                        aria-label={`Augmenter la quantité de ${item.name}`}
+                      >
+                        +
+                      </button>
+                    </div>
+
+                    <span className="text-base font-semibold text-slate-800">
+                      {formatMoney(item.price * item.quantity)}
+                    </span>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+
+          <div className="mt-5 space-y-4 border-t border-slate-200 pt-4">
+            <div className="flex items-center justify-between">
+              <span className="text-sm text-slate-500">{count} article{count > 1 ? "s" : ""}</span>
+              <span className="text-3xl font-black text-slate-900">{formatMoney(total)}</span>
+            </div>
+
+            <label className="block">
+              <span className="mb-2 block text-sm text-slate-600">Client (optionnel)</span>
+              <input
+                className="w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-700 outline-none transition focus:border-blue-500"
+                onChange={(event) => setClient(event.target.value)}
+                placeholder="Client (optionnel)"
+                type="text"
+                value={client}
+              />
+            </label>
+
+            <div className="grid grid-cols-3 gap-2">
+              {paymentMethods.map((method) => (
+                <button
+                  key={method.key}
+                  type="button"
+                  onClick={() => setSelectedPayment(method.key)}
+                  className={`rounded-lg border px-2 py-2 text-sm font-medium transition ${
+                    selectedPayment === method.key
+                      ? "border-blue-500 bg-blue-50 text-blue-700"
+                      : "border-slate-200 bg-white text-slate-600 hover:border-slate-300"
+                  }`}
+                >
+                  {method.label}
+                </button>
+              ))}
+            </div>
+
+            <label className="block">
+              <span className="mb-2 block text-sm text-slate-600">Montant remis</span>
+              <input
+                className="w-full rounded-lg border border-slate-200 bg-slate-100 px-3 py-2 text-sm text-slate-700 outline-none focus:border-blue-500"
+                min={0}
+                onChange={(event) => setPaymentAmount(event.target.value)}
+                type="number"
+                value={paymentAmount}
+              />
+            </label>
+
+            <button
+              type="button"
+              disabled={items.length === 0}
+              className="w-full rounded-lg bg-slate-300 px-4 py-3 text-base font-semibold text-slate-700 transition hover:bg-slate-400 disabled:cursor-not-allowed disabled:opacity-50"
+              onClick={() => {
+                if (items.length === 0) return;
+                setCheckoutError("");
+                setCheckoutOpen(true);
+              }}
+            >
+              Valider la vente
+            </button>
+          </div>
+        </aside>
+      </div>
+
+      {checkoutOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/40 px-4">
+          <div className="w-full max-w-md rounded-2xl bg-white p-5 shadow-xl">
+            <h2 className="text-xl font-bold text-slate-900">Confirmer la vente</h2>
+            <div className="mt-4 space-y-2 text-sm text-slate-600">
+              <p>Client : <span className="font-medium text-slate-800">{client || "Client général"}</span></p>
+              <p>Mode de paiement : <span className="font-medium text-slate-800">{paymentMethods.find((option) => option.key === selectedPayment)?.label}</span></p>
+              <p>Total : <span className="text-lg font-bold text-slate-900">{formatMoney(total)}</span></p>
+              <p>Montant remis : <span className="font-medium text-slate-800">{formatMoney(Number(paymentAmount || 0))}</span></p>
+            </div>
+
+            {checkoutError && (
+              <p className="mt-3 rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">
+                {checkoutError}
+              </p>
+            )}
+
+            <div className="mt-5 flex justify-end gap-2">
+              <button
+                type="button"
+                className="rounded-lg border border-slate-200 px-3 py-2 text-sm font-medium text-slate-700"
+                onClick={() => setCheckoutOpen(false)}
+              >
+                Annuler
+              </button>
+              <button
+                type="button"
+                className="rounded-lg bg-blue-600 px-3 py-2 text-sm font-semibold text-white"
+                onClick={handleSubmitSale}
+              >
+                Confirmer
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {lastSale && (
+        <div className="fixed bottom-4 right-4 z-40 rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-800 shadow-lg">
+          Vente validée • {lastSale.client}
+        </div>
+      )}
+    </main>
+  );
+}

@@ -2,8 +2,11 @@ import { spawn } from "node:child_process";
 import fs from "node:fs";
 import { fileURLToPath } from "node:url";
 
-const tempDir = "D:/MET/temp";
-const npmCacheDir = "D:/MET/npmcache";
+import os from "node:os";
+import path from "node:path";
+
+const tempDir = path.join(os.tmpdir(), "stockline-vite-temp");
+const npmCacheDir = path.join(os.tmpdir(), "stockline-npm-cache");
 
 for (const dir of [tempDir, npmCacheDir]) {
   fs.mkdirSync(dir, { recursive: true });

@@ -1,6 +1,7 @@
 import { lazy, Suspense, useState } from "react";
 import {
   FileText,
+  Eye,
   Plus,
   Search,
   TrendingDown,
@@ -13,6 +14,7 @@ import ErrorState from "@/components/ui/ErrorState.jsx";
 import Skeleton from "@/components/ui/Skeleton.jsx";
 import { parseApiError } from "@/core/api/errors.js";
 import { useDebounce } from "@/core/hooks/useDebounce.js";
+import { useNavigate } from "react-router-dom";
 import { formatDate } from "@/core/utils/formatDate.js";
 import { formatMoney } from "@/core/utils/formatMoney.js";
 import {
@@ -75,7 +77,7 @@ function DocumentStatus({ status }) {
   );
 }
 
-function DocumentsTable({ documents }) {
+function DocumentsTable({ documents, onOpen }) {
   return (
     <div className="overflow-x-auto">
       <table className="w-full min-w-[760px] text-left text-sm">
@@ -88,6 +90,9 @@ function DocumentsTable({ documents }) {
             <th className="px-4 py-3" scope="col">Échéance</th>
             <th className="px-4 py-3 text-right" scope="col">Montant</th>
             <th className="px-4 py-3 sm:px-5" scope="col">Statut</th>
+            <th className="px-4 py-3 sm:px-5" scope="col">
+              <span className="sr-only">Actions</span>
+            </th>
           </tr>
         </thead>
         <tbody className="divide-y divide-slate-100">
@@ -129,6 +134,16 @@ function DocumentsTable({ documents }) {
               <td className="whitespace-nowrap px-4 py-4 sm:px-5">
                 <DocumentStatus status={document.statut} />
               </td>
+              <td className="px-4 py-2 sm:px-5">
+                <Button
+                  aria-label={`Consulter ${document.numero}`}
+                  className="!min-h-10 !h-10 !w-10 !p-0"
+                  onClick={() => onOpen(document._id ?? document.id)}
+                  variant="ghost"
+                >
+                  <Eye aria-hidden="true" className="h-4 w-4" />
+                </Button>
+              </td>
             </tr>
           ))}
         </tbody>
@@ -148,6 +163,7 @@ function DocumentsTableSkeleton() {
 }
 
 export default function DocumentsPage() {
+  const navigate = useNavigate();
   const [activeTab, setActiveTab] = useState("tous");
   const [search, setSearch] = useState("");
   const [page, setPage] = useState(1);
@@ -305,7 +321,10 @@ export default function DocumentsPage() {
               />
             </div>
           ) : documents.length ? (
-            <DocumentsTable documents={documents} />
+            <DocumentsTable
+              documents={documents}
+              onOpen={(id) => navigate(`/documents/${encodeURIComponent(id)}`)}
+            />
           ) : (
             <EmptyState
               description={

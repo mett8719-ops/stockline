@@ -76,3 +76,87 @@ export function validateDocumentsResponse(data, meta) {
 
   return { documents: data.documents, indicateurs, meta };
 }
+
+export function validateDocumentDetail(document) {
+  if (
+    !isRecord(document) ||
+    typeof (document._id ?? document.id) !== "string" ||
+    typeof document.numero !== "string" ||
+    !["devis", "facture", "recu", "bon_livraison"].includes(document.type) ||
+    typeof document.clientNom !== "string" ||
+    ![
+      "brouillon",
+      "en_attente",
+      "paye",
+      "en_retard",
+      "accepte",
+      "refuse",
+      "expire",
+      "annule",
+    ].includes(document.statut) ||
+    !Array.isArray(document.lignes)
+  ) {
+    throw new TypeError("La réponse du détail du document est invalide.");
+  }
+
+  assertDate(document.dateEmission, "dateEmission");
+  assertDate(document.dateEcheance, "dateEcheance", true);
+  assertDate(document.dateValidite, "dateValidite", true);
+  assertDate(document.datePaiement, "datePaiement", true);
+
+  for (const field of [
+    "sousTotal",
+    "montantTva",
+    "remiseGlobale",
+    "montantTotal",
+    "montantPaye",
+    "montantRestant",
+  ]) {
+    assertAmount(document[field], field);
+  }
+
+  for (const line of document.lignes) {
+    if (
+      !isRecord(line) ||
+      typeof line.designation !== "string" ||
+      typeof line.quantite !== "number" ||
+      !Number.isFinite(line.quantite) ||
+      typeof line.prixUnitaire !== "number" ||
+      !Number.isFinite(line.prixUnitaire)
+    ) {
+      throw new TypeError("Une ligne du document est invalide.");
+    }
+
+    assertAmount(line.totalLigne, "totalLigne");
+    if (line.tauxTva !== undefined) assertAmount(line.tauxTva, "tauxTva");
+    if (line.remise !== undefined) assertAmount(line.remise, "remise");
+  }
+
+  if (
+    document.documentSourceId != null &&
+    typeof document.documentSourceId !== "string" &&
+    !isRecord(document.documentSourceId)
+  ) {
+    throw new TypeError("Le lien vers le document source est invalide.");
+  }
+
+  return document;
+}
+
+export function validateDocumentConversion(result) {
+  if (
+    !isRecord(result) ||
+    !isRecord(result.devis) ||
+    typeof (result.devis.id ?? result.devis._id) !== "string" ||
+    result.devis.statut !== "accepte"
+  ) {
+    throw new TypeError("La réponse de conversion du devis est invalide.");
+  }
+
+  validateDocumentDetail(result.facture);
+  if (result.facture.type !== "facture") {
+    throw new TypeError("La conversion du devis n’a pas généré une facture.");
+  }
+
+  return result;
+}

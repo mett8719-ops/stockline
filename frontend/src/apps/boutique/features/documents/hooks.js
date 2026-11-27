@@ -1,6 +1,8 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
   createDocument,
+  convertDocumentQuote,
+  getDocument,
   getDocuments,
   searchDocumentCustomers,
   searchDocumentProducts,
@@ -11,6 +13,14 @@ export function useDocuments(filters) {
     queryKey: ["documents", filters],
     queryFn: () => getDocuments(filters),
     placeholderData: (previousData) => previousData,
+  });
+}
+
+export function useDocument(id) {
+  return useQuery({
+    queryKey: ["documents", "detail", id],
+    queryFn: () => getDocument(id),
+    enabled: Boolean(id),
   });
 }
 
@@ -39,5 +49,24 @@ export function useCreateDocument() {
     mutationFn: createDocument,
     onSuccess: () =>
       queryClient.invalidateQueries({ queryKey: ["documents"] }),
+  });
+}
+
+export function useConvertDocumentQuote() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: convertDocumentQuote,
+    onSuccess: (result) =>
+      Promise.all([
+        queryClient.invalidateQueries({ queryKey: ["documents"] }),
+        queryClient.setQueryData(
+          ["documents", "detail", result.facture._id ?? result.facture.id],
+          result.facture,
+        ),
+        queryClient.invalidateQueries({
+          queryKey: ["documents", "detail", result.devis.id ?? result.devis._id],
+        }),
+      ]),
   });
 }

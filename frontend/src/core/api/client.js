@@ -1,7 +1,8 @@
 import axios from "axios";
 import { authStore } from "@/core/store/authStore.js";
 
-const apiUrl = import.meta.env.VITE_API_URL;
+const viteEnv = typeof import.meta !== "undefined" ? import.meta.env ?? {} : {};
+const apiUrl = viteEnv.VITE_API_URL;
 const baseURL = `${apiUrl ? apiUrl.replace(/\/+$/, "") : ""}/api/v1`;
 
 export const apiClient = axios.create({

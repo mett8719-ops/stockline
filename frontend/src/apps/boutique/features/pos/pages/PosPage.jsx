@@ -1,5 +1,7 @@
 import { Search, ShoppingCart, Trash2 } from "lucide-react";
 import { useMemo, useState } from "react";
+import { parseApiError } from "@/core/api/errors.js";
+import { submitSaleToApi, getStockIssueNames } from "../services/submitSale.js";
 import { usePosCart } from "../store/cartStore.js";
 
 const categories = [
@@ -69,6 +71,7 @@ export default function PosPage() {
   const [query, setQuery] = useState("");
   const [checkoutOpen, setCheckoutOpen] = useState(false);
   const [checkoutError, setCheckoutError] = useState("");
+  const [cartOpen, setCartOpen] = useState(true);
   const {
     items,
     total,
@@ -82,6 +85,10 @@ export default function PosPage() {
     setClient,
     paymentAmount,
     setPaymentAmount,
+    paymentBreakdown,
+    setPaymentBreakdown,
+    getPaymentTotal,
+    getChange,
     submitSale,
     lastSale,
   } = usePosCart();
@@ -99,15 +106,53 @@ export default function PosPage() {
     });
   }, [activeCategory, query]);
 
-  function handleSubmitSale() {
+  async function handleSubmitSale() {
     try {
-      const sale = submitSale();
+      const sale = await submitSaleToApi({
+        items,
+        total,
+        client,
+        selectedPayment,
+        paymentBreakdown,
+        paymentAmount,
+      });
       setCheckoutError("");
       setCheckoutOpen(false);
       console.info("Vente validée", sale);
+      submitSale();
     } catch (error) {
-      setCheckoutError(error.message || "La vente ne peut pas être validée.");
+      const apiError = parseApiError(error);
+      const stockIssues = getStockIssueNames(error);
+      setCheckoutError(
+        stockIssues.length > 0
+          ? `${apiError.message} • ${stockIssues.join(", ")}`
+          : apiError.message,
+      );
     }
+  }
+
+  function handlePaymentModeChange(mode) {
+    setSelectedPayment(mode);
+    if (mode === "credit") {
+      setPaymentBreakdown({
+        ...paymentBreakdown,
+        credit: total,
+      });
+      return;
+    }
+
+    if (mode === "mobile_money") {
+      setPaymentBreakdown({
+        ...paymentBreakdown,
+        mobile_money: paymentAmount || total,
+      });
+      return;
+    }
+
+    setPaymentBreakdown({
+      ...paymentBreakdown,
+      especes: paymentAmount || total,
+    });
   }
 
   return (
@@ -150,13 +195,26 @@ export default function PosPage() {
           </div>
         </section>
 
-        <aside className="rounded-2xl border border-slate-200 bg-slate-50 p-4 shadow-sm">
-          <div className="mb-4 flex items-center gap-2 border-b border-slate-200 pb-3 text-lg font-semibold text-slate-800">
-            <ShoppingCart className="h-5 w-5" aria-hidden="true" />
-            Panier
+        <aside className={`rounded-2xl border border-slate-200 bg-slate-50 p-4 shadow-sm ${cartOpen ? "" : "xl:w-[90px]"}`}>
+          <div className="mb-4 flex items-center justify-between gap-2 border-b border-slate-200 pb-3 text-lg font-semibold text-slate-800">
+            <div className="flex items-center gap-2">
+              <ShoppingCart className="h-5 w-5" aria-hidden="true" />
+              {cartOpen && <span>Panier</span>}
+            </div>
+            <button
+              type="button"
+              className="rounded-lg border border-slate-200 bg-white px-2 py-1 text-xs font-medium text-slate-600"
+              onClick={() => setCartOpen((current) => !current)}
+            >
+              {cartOpen ? "Réduire" : "Ouvrir"}
+            </button>
           </div>
 
-          {items.length === 0 ? (
+          {!cartOpen ? (
+            <div className="flex min-h-[120px] items-center justify-center text-xs font-medium text-slate-500">
+              Panier
+            </div>
+          ) : items.length === 0 ? (
             <div className="flex min-h-[365px] flex-col items-center justify-center gap-4 text-center text-slate-500">
               <ShoppingCart className="h-14 w-14 text-slate-300" aria-hidden="true" />
               <div>
@@ -238,14 +296,19 @@ export default function PosPage() {
               />
             </label>
 
-            <div className="grid grid-cols-3 gap-2">
-              {paymentMethods.map((method) => (
+            <div className="grid grid-cols-2 gap-2">
+              {[
+                { key: "especes", label: "Espèces" },
+                { key: "mobile_money", label: "Mobile" },
+                { key: "credit", label: "Crédit" },
+                { key: "mixed", label: "Mixte" },
+              ].map((method) => (
                 <button
                   key={method.key}
                   type="button"
-                  onClick={() => setSelectedPayment(method.key)}
+                  onClick={() => handlePaymentModeChange(method.key)}
                   className={`rounded-lg border px-2 py-2 text-sm font-medium transition ${
-                    selectedPayment === method.key
+                    (selectedPayment === method.key || (method.key === "mixed" && selectedPayment === "mixed"))
                       ? "border-blue-500 bg-blue-50 text-blue-700"
                       : "border-slate-200 bg-white text-slate-600 hover:border-slate-300"
                   }`}
@@ -255,16 +318,76 @@ export default function PosPage() {
               ))}
             </div>
 
-            <label className="block">
-              <span className="mb-2 block text-sm text-slate-600">Montant remis</span>
-              <input
-                className="w-full rounded-lg border border-slate-200 bg-slate-100 px-3 py-2 text-sm text-slate-700 outline-none focus:border-blue-500"
-                min={0}
-                onChange={(event) => setPaymentAmount(event.target.value)}
-                type="number"
-                value={paymentAmount}
-              />
-            </label>
+            {selectedPayment === "mixed" && (
+              <div className="space-y-3">
+                <label className="block">
+                  <span className="mb-2 block text-sm text-slate-600">Espèces</span>
+                  <input
+                    className="w-full rounded-lg border border-slate-200 bg-slate-100 px-3 py-2 text-sm text-slate-700 outline-none focus:border-blue-500"
+                    min={0}
+                    onChange={(event) =>
+                      setPaymentBreakdown({
+                        ...paymentBreakdown,
+                        especes: Number(event.target.value || 0),
+                      })
+                    }
+                    type="number"
+                    value={paymentBreakdown.especes || 0}
+                  />
+                </label>
+
+                <label className="block">
+                  <span className="mb-2 block text-sm text-slate-600">Mobile Money</span>
+                  <input
+                    className="w-full rounded-lg border border-slate-200 bg-slate-100 px-3 py-2 text-sm text-slate-700 outline-none focus:border-blue-500"
+                    min={0}
+                    onChange={(event) =>
+                      setPaymentBreakdown({
+                        ...paymentBreakdown,
+                        mobile_money: Number(event.target.value || 0),
+                      })
+                    }
+                    type="number"
+                    value={paymentBreakdown.mobile_money || 0}
+                  />
+                </label>
+              </div>
+            )}
+
+            {selectedPayment !== "mixed" && (
+              <label className="block">
+                <span className="mb-2 block text-sm text-slate-600">
+                  {selectedPayment === "credit" ? "Montant du crédit" : "Montant remis"}
+                </span>
+                <input
+                  className="w-full rounded-lg border border-slate-200 bg-slate-100 px-3 py-2 text-sm text-slate-700 outline-none focus:border-blue-500"
+                  min={0}
+                  onChange={(event) => {
+                    const nextValue = Number(event.target.value || 0);
+                    setPaymentAmount(nextValue);
+                    if (selectedPayment === "credit") {
+                      setPaymentBreakdown({
+                        ...paymentBreakdown,
+                        credit: nextValue,
+                      });
+                    }
+                  }}
+                  type="number"
+                  value={selectedPayment === "credit" ? paymentBreakdown.credit || total : paymentAmount || 0}
+                />
+              </label>
+            )}
+
+            <div className="rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-600">
+              <div className="flex items-center justify-between">
+                <span>Total encaissé</span>
+                <strong className="text-slate-900">{formatMoney(getPaymentTotal())}</strong>
+              </div>
+              <div className="mt-1 flex items-center justify-between">
+                <span>Monnaie</span>
+                <strong className="text-emerald-700">{formatMoney(getChange())}</strong>
+              </div>
+            </div>
 
             <button
               type="button"

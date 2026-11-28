@@ -1,5 +1,9 @@
 import assert from "node:assert/strict";
 import test from "node:test";
+import {
+  buildSalePayload,
+  getStockIssueNames,
+} from "../src/apps/boutique/features/pos/services/submitSale.js";
 import { usePosCart } from "../src/apps/boutique/features/pos/store/cartStore.js";
 
 const product = {
@@ -50,15 +54,69 @@ test("pos cart validates and clears a completed sale", () => {
   cart.reset();
   cart.addItem(product, 2);
   cart.setClient("Client test");
-  cart.setSelectedPayment("mobile");
+  cart.setSelectedPayment("mobile_money");
   cart.setPaymentAmount(30000);
 
   const sale = cart.submitSale();
   const state = usePosCart.getState();
 
   assert.equal(sale.total, 30000);
-  assert.equal(sale.paymentMethod, "mobile");
+  assert.equal(sale.paymentMethod, "mobile_money");
   assert.equal(state.items.length, 0);
   assert.equal(state.total, 0);
   assert.equal(state.client, "");
+});
+
+test("pos cart accepts mixed cash and mobile money payments and requires client for credit sales", () => {
+  const cart = usePosCart.getState();
+  cart.reset();
+  cart.addItem(product, 1);
+  cart.setPaymentBreakdown({ especes: 5000, mobile_money: 10000, carte: 0, credit: 0 });
+
+  assert.equal(cart.getPaymentTotal(), 15000);
+  assert.equal(cart.getChange(), 0);
+
+  const mixedSale = cart.submitSale();
+  assert.equal(mixedSale.amounts.especes, 5000);
+  assert.equal(mixedSale.amounts.mobile_money, 10000);
+
+  cart.reset();
+  cart.addItem(product, 1);
+  cart.setSelectedPayment("credit");
+  cart.setClient(" ");
+
+  assert.throws(() => cart.submitSale(), /client/i);
+});
+
+test("pos sale builder creates backend payload and reads stock issue names", () => {
+  const cart = usePosCart.getState();
+  cart.reset();
+  cart.addItem(product, 2);
+  cart.setSelectedPayment("mixed");
+  cart.setPaymentBreakdown({ especes: 15000, mobile_money: 15000, carte: 0, credit: 0 });
+
+  const payload = buildSalePayload({
+    items: cart.items,
+    total: cart.total,
+    client: "Client test",
+    selectedPayment: cart.selectedPayment,
+    paymentBreakdown: cart.paymentBreakdown,
+  });
+
+  assert.equal(payload.lignes[0].produitId, product.id);
+  assert.equal(payload.lignes[0].quantite, 2);
+  assert.equal(payload.paiements.length, 2);
+  assert.deepEqual(
+    getStockIssueNames({
+      response: {
+        data: {
+          error: {
+            code: "INSUFFICIENT_STOCK",
+            details: [{ produit: "Riz local 25kg", disponible: 2, demande: 5 }],
+          },
+        },
+      },
+    }),
+    ["Riz local 25kg"],
+  );
 });
